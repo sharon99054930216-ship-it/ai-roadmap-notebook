@@ -12,12 +12,16 @@
 **4.練習使用CLI修改代碼。**  
 
 ## 練習用 Gemini CLI 終端機下命令與修改程式  
+AI CLI功能優點:自動檔案搜尋，移動或複製檔案位置，直接修改.py .txt .v的檔案內容  
+
 1.安裝 Node.exe  
 <img width="791" height="183" alt="image" src="https://github.com/user-attachments/assets/c1302e75-667a-4c23-8754-bb82d4180961" />  
 2.在命令提示字元CMD輸入gemini來開啟gemini CLI  
 <img width="1544" height="687" alt="image" src="https://github.com/user-attachments/assets/a3a2644f-2495-4684-8e5d-cea5274af438" />  
 3.在此 修改代碼 與 CLI中進行命令
-<img width="1164" height="654" alt="image" src="https://github.com/user-attachments/assets/469fe004-e97f-4c02-94c9-c631925ece9f" />
+<img width="1164" height="654" alt="image" src="https://github.com/user-attachments/assets/469fe004-e97f-4c02-94c9-c631925ece9f" />  
+
+
 
 
 
