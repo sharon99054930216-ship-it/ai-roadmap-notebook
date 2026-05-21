@@ -21,6 +21,15 @@ AI CLI功能優點:自動檔案搜尋，移動或複製檔案位置，直接修�
 3.在此 修改代碼 與 CLI中進行命令
 <img width="1164" height="654" alt="image" src="https://github.com/user-attachments/assets/469fe004-e97f-4c02-94c9-c631925ece9f" />  
 
+## 在本地做筆記的應用
+1.開啟 gemini CLI，輸入指定       
+(額外:使用 VS Code 開啟 gemini CLI 輸入指定)  
+<img width="777" height="958" alt="image" src="https://github.com/user-attachments/assets/c29bb17e-1945-4f2e-9614-9a70089c92ee" />  
+2.在終端機輸入指令，走進資料夾  
+<img width="706" height="278" alt="image" src="https://github.com/user-attachments/assets/700bc0b0-1906-4589-8bbb-310df873272a" />  
+3.本地的可以做筆記的網頁  
+<img width="884" height="605" alt="image" src="https://github.com/user-attachments/assets/fe270702-4695-49ed-a174-8669f65444dd" />
+
 
 
 
