@@ -60,3 +60,21 @@ git commit -m "這次改了什麼（例如：調高 Learning Rate）"(這是在�
 
 
 # part01 Machine Learning Basics
+## 名詞理解
+1.Loss function 損失函數:函數值越低表示模型誤差越小  
+2.gradient descent 梯度下降:尋找最佳化的過程  
+3.regularization 正規化:限制模型參數的大小，防止模型過度擬合  
+4.generalization 泛化:模型在處理未見過的「新數據」時，依然能準確預測與應對的能力  
+5.Bias-Variance trade-off 偏差變異權衡:  
+Bias:模型對於數據規律的預設偏誤，模型太簡單，Underfitting (欠擬合:訓練集誤差高，測試集誤差也高)  
+Variance:模型在面對不同訓練數據時，預測結果的波動程度，模型太複雜，Overfitting (過擬合:訓練集誤差極低，測試集誤差高)  
+6.
+
+
+
+
+
+
+
+
+
