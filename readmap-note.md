@@ -26,7 +26,7 @@ Cursor優點功能:
 1. 自動寫入檔案存到電腦:不需要重複的複製貼上行為  
 2. 自動排版功能:圈選需要排版的文字後，按下右鍵，點選Refactor...，點選Add to chat (或是Ctrl+L)，輸入排版需求指令  
 3. 詢問檔案內容或重點:按 Ctrl + L，輸入提問(點文字框中的Work for XXs可察看回覆內容)  
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/381bf65f-9d24-4beb-94dc-046ad55b830e" />
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/381bf65f-9d24-4beb-94dc-046ad55b830e" />
 
 Cursor使用步驟:   
 1.建立新專案資料夾:按下左上角的 File -> Open Folder，在桌面建立一個新資料夾叫 cursor-practice，然後點選「選擇資料夾」。  
@@ -38,7 +38,7 @@ Cursor使用步驟:
 ## 練習下載 Git Bach 並連結 GitHub (git-test)  
 Git使用功能優點:紀錄與追蹤 時光倒流 差異比對 雲端同步  
 
-<img width="615" height="403" alt="image" src="https://github.com/user-attachments/assets/e05773ba-3852-4bd2-b1b0-43082b5bee4d" />  
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/e05773ba-3852-4bd2-b1b0-43082b5bee4d" />  
 
 
 Git使用順序是：  
@@ -84,5 +84,22 @@ Early Stopping:在驗證集 Loss 剛開始回升的臨界點，立刻強制停�
 
 ## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
 (a)這個part主要在說明機器學習，看到了一些新手可能會常犯的錯誤，像是把test sat拿去跑第二次的驗證;還有Underfitting跟 Overfitting 的解決方法等等。這幾周讀書會也有練習使用colab跑模型並用kaggle做模型最後的好壞判斷，使我在讀這個part時有更好的理解!       
-(b)目前還沒發現現有方法的問題
+(b)目前還沒發現現有方法的問題  
 
+# part02 Deep Learning Basics
+## 名詞理解
+1.MLP:線性層負責空間變換，非線性負責扭曲摺疊，兩者透過「加深與加寬」，讓網路能模擬世界上的任何複雜規律。  
+線性模型(單層感知機)   
+<img width="200" alt="image" src="https://github.com/user-attachments/assets/ac4e7307-4034-4aa4-a492-123961dde8e4" />  
+MLP(多層感知機）:想得到非線性的模型(加入sigmoid，ReLU)，因為線性的模型能力有限  
+<img width="250" alt="image" src="https://github.com/user-attachments/assets/fddeeb64-4689-4e75-b457-54e78591d186" />  
+
+2.
+3.
+4.
+
+
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)看到不確定功能的名詞時，上網找影片學習，
+(b)
