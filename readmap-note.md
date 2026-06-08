@@ -108,9 +108,13 @@ Logits 的分佈應該要對稱、均勻，且數值大小適中（通常在 0 �
 假設你在做一個 n 分類的任務。在完全沒有訓練的情況下，一個合理的模型應該對所有類別一視同仁，猜對任何一類的機率都應該是均勻的 1/n_classes。  
 
 5.Normalization(正規化)  
-BatchNorm:(跨樣本，CNN）： 它是對同一個特徵、跨所有樣本（Batch）去算平均值和方差(缺點:被 Batch Size 綁架，無法應對「變長句子」，推理（Inference）與訓練的不一致性)。  
+BatchNorm:(跨樣本，CNN）： 它是對同一個特徵、跨所有樣本（Batch）去算平均值和方差(缺點:被 Batch Size 綁架、無法應對變長句子(處理 NLP 變長句子時，後方的補零（Padding）會嚴重污染整體特徵分佈。)、推理與訓練的不一致性)。  
 LayerNorm:（同樣本內，Transformer）： 它是對單一一個樣本、跨它自己所有的特徵去算平均值和方差。  
 RMSNorm:現代大模型（如 LLaMA、Gemma、Mistral）為了追求極致速度而進化出的「減重版」元件。  
+Pre-Norm vs Post-Norm:所有現代 LLM 用 Pre-Norm   
+Post-Norm 缺點：深層網路的梯度爆炸/消失  
+在 Post-Norm 中，每一層的輸出都會被強行做一次 LayerNorm，這會導致越往深層走，主幹道上的數值和梯度分佈會被層層扭曲。  
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/9778872f-55c0-4408-8766-c85e8d41021b" />  
 
 6.Optimizer(最佳化)    
 SGD(動量法):隨機梯度下降，哪裡陡就往哪裡走。如果遇到「兩側極陡、中間平緩」的狹長峽谷地形（震盪方向），SGD 就會在兩側牆壁不斷劇烈震盪，卡在原地走不出去。  
@@ -120,7 +124,11 @@ AdamW(把 Weight Decay 算清楚):Adam 依照梯度算出更新量後，在最�
 
 ## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？    
 (a)看到不確定功能的名詞時，上網找影片學習，看讀書會的影片也蠻有幫助的。也發現在Roadmap文章中ai擅長使用簡潔的形容詞來描述內容，所以有些內容會看不太清楚它想表達的意思是什麼，我的做法是去了解此主題的大方向以及該主題內容中的各個名詞功能特色等等。  
-(b)   
+(b)  
+1.Activation的困境：Sigmoid → 存在飽和區，在深層網路的鏈鎖律下會引發梯度消失，導致底層權重更新停滯。  
+2.Optimizer的困境：標準SGD → 缺乏動量與自適應步長，在病態曲率(狹長峽谷)地形中會產生嚴重的高頻震盪，極難收斂。  
+3.Normalization的困境：BatchNorm/Post-Norm → BN 依賴微批次大小且易受 Padding 污染；Post-Norm 則因破壞了殘差的線性梯度，導致深層模型在初始化初期極易數值崩潰。  
 
 
-
+# part03 Convolutional Neural Networks
+## 名詞理解
