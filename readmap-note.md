@@ -132,3 +132,16 @@ AdamW(把 Weight Decay 算清楚):Adam 依照梯度算出更新量後，在最�
 
 # part03 Convolutional Neural Networks
 ## 名詞理解
+1.CNN:把參數量砍掉好幾個數量級  
+區域連接:一個神經元不再看整張圖，而是透過一個固定大小的滑動視窗只看局部特徵。  
+權重共享:這個滑動視窗在整張圖片從左到右、從上到下移動時，使用的是同一組權重。  
+2.CNN組成  
+Convolution Layer(卷積層):特徵提取  
+Pooling Layer(池化層):濾掉不重要的特徵，減少模型參數，防止過擬合  
+Fully Connected Layer(全連接層):統計並歸類得到的特徵後做輸出  
+3.Pooling   
+MaxPool:取最大值，AveragePool:取平均  
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/f8c9350d-02dc-44b5-90b1-15811cfe6ffe" />  
+<img width="700" alt="image" src="https://github.com/user-attachments/assets/15d5e122-12fc-4a14-841d-a95896246cb8" />  
+GlobalAvgPool:可以是任意解析度輸入    
+ex:如果最後特徵圖是 [1, 512, 7, 7]，GAP 會對這 512 張 7x7 的圖片各自計算平均值。最後輸出就變成 [1, 512, 1, 1]。你直接得到了 512 個數值，這 512 個數值就代表這 512 種特徵在整張圖上的平均強度。  
