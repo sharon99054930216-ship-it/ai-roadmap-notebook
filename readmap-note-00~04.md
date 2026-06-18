@@ -160,11 +160,24 @@ ViT:把圖片打碎成一堆 Patch，然後強行去計算「任意兩個方塊�
 # part04 RNN, LSTM, & Seq2Seq
 ## 名詞理解  
 1.序列不能用 MLP / CNN 原因:MLP需要固定輸入長度，CNN視窗有限、獨嘗內容時會忘記前面的內容  
-2.RNN:  
+2.RNN說明:  
 使用了 h_t（Hidden State / 隱藏狀態），累積過去訊息。時間軸上共享權重，支援任意長度  
 ex:給一句話 “The cat sat on the mat”，要做翻譯  
 當模型讀到 The，大腦記下基本資訊 h_1。  
 當讀到 cat，大腦結合剛才的記憶 h_1 與新詞 cat，更新記憶成 h_2（此時大腦知道主詞是單數貓）。  
 一路讀到 mat 時，目前的 h_6 裡已經累積了「有一隻貓坐在某個東西上」的完整過去訊息。  
-3.
+3.RNN困境:長距離的資料無法學習，梯度消失、梯度爆炸(→ LSTM 出現)  
+<img width="550"alt="image" src="https://github.com/user-attachments/assets/c85d8026-e902-4363-bd9e-15c608abf2b2" />  
+4.LSTM:從「非線性矩陣相乘」變成「線性的矩陣加法」，反向時不會指數衰減  
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/02b285b6-cdbf-4ad2-a57b-0f52cf4b4a14" />  
+5.GRU:更輕量，把 LSTM 中的forget gat與input gat 合起還改為update gate  
+6.
+
+
+
+
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？      
+(a)看了關於RNN和LSTM和GRU概念介紹的文章:https://ithelp.ithome.com.tw/m/articles/10242543，
+
 
