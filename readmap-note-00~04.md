@@ -167,7 +167,7 @@ ex:給一句話 “The cat sat on the mat”，要做翻譯
 當讀到 cat，大腦結合剛才的記憶 h_1 與新詞 cat，更新記憶成 h_2（此時大腦知道主詞是單數貓）。  
 一路讀到 mat 時，目前的 h_6 裡已經累積了「有一隻貓坐在某個東西上」的完整過去訊息。  
 3.RNN困境:長距離的資料無法學習，梯度消失、梯度爆炸(→ LSTM 出現)  
-<img width="550"alt="image" src="https://github.com/user-attachments/assets/c85d8026-e902-4363-bd9e-15c608abf2b2" />  
+<img width="550" alt="image" src="https://github.com/user-attachments/assets/c85d8026-e902-4363-bd9e-15c608abf2b2" />  
 4.LSTM:從「非線性矩陣相乘」變成「線性的矩陣加法」，反向時不會指數衰減  
 <img width="500" alt="image" src="https://github.com/user-attachments/assets/02b285b6-cdbf-4ad2-a57b-0f52cf4b4a14" />  
 5.GRU:更輕量，把 LSTM 中的forget gat與input gat 合起還改為update gate  
