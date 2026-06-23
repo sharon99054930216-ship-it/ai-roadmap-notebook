@@ -171,11 +171,19 @@ ex:給一句話 “The cat sat on the mat”，要做翻譯
 4.LSTM:從「非線性矩陣相乘」變成「線性的矩陣加法」，反向時不會指數衰減  
 <img width="500" alt="image" src="https://github.com/user-attachments/assets/02b285b6-cdbf-4ad2-a57b-0f52cf4b4a14" />  
 5.GRU:更輕量，把 LSTM 中的forget gat與input gat 合起還改為update gate  
-6.
+6.Seq2Seq    
+Encoder:負責讀取原語言(ex:英文)，最後輸出的 h_T  
+Decoder:拿著這個 h_T 作為它的初始記憶 h_0，開始翻譯出目標語言(ex:中文)  
+7.Attention   
+傳統:拿著 Decoder 的向量去跟 Encoder 的一堆向量算點積  
+Transformer: 拿著 同一個序列 裡的任意一個單字向量，去跟 同一個序列 裡的所有單字向量算點積（自己看自己）  
+8.State Space Models & Mamba  
+歷史從 RNN 出發（因為失憶和無法並行被放棄）  
+Transformer 靠著並行和全局注意力統治世界（但引發了 O(N^2) 記憶體危機）  
+Mamba / SSM 吸收了 Transformer 的動態注意力靈魂與 GPU 並行精髓，重新復活了 RNN   
 
 
-
-
+  
 
 ## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？      
 (a)看了關於RNN和LSTM和GRU概念介紹的文章:https://ithelp.ithome.com.tw/m/articles/10242543，
