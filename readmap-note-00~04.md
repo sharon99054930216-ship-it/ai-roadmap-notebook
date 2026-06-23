@@ -183,9 +183,9 @@ Transformer 靠著並行和全局注意力統治世界（但引發了 O(N^2) 記
 Mamba / SSM 吸收了 Transformer 的動態注意力靈魂與 GPU 並行精髓，重新復活了 RNN   
 
 
-  
-
 ## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？      
 (a)看了關於RNN和LSTM和GRU概念介紹的文章:https://ithelp.ithome.com.tw/m/articles/10242543，
-
+RNN:專為序列設計(問題:速度慢(無法並行計算)，記性差) → Transformer:注意力機制，會抓重點，給重要的詞更高的關注度權重，可以並行計算 
+(b)在處理文字、程式碼或長序列時，現有主流方法（GPT、Claude 等背後的純 Transformer 架構）的問題則出現長文本的成本：
+純 Transformer 計算複雜度隨著長度呈平方級暴增 O(N^2)
 
