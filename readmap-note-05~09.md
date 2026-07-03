@@ -21,7 +21,7 @@ attention output：Attention(Q, K, V) = softmax(QKᵀ / √d) · V
 從「加在 Embedding 上（絕對位置）」到「改在 Attention Score 上（相對距離）」，再到如今大模型（LLM）的「旋轉矩陣（RoPE）與長文本外推技術」，讓大模型能輕鬆讀懂超長文字  
 7.Encoder / Decoder / Encoder-Decoder  
 Encoder-BERT:預訓練任務，語意理解能力  
-Decoder-ChatGPT、Claude、Gemini :大規模模型，文本生成能力，generative(生成式) + scaling(規模化) + in-context learning(情境學習)能執行所有任務  
+Decoder-ChatGPT、Claude、Gemini :大規模模型，文本生成能力，generative(生成式) + scaling(規模化) + in-context learning(上下文學習)能執行所有任務  
 Encoder-decoder-T5 / BART:Encoder 處理輸入、Decoder 一邊用 cross-attention(交叉注意力) 看 Encoder 一邊輸出像接龍一樣逐字生成新文字。翻譯、摘要的最自然形式  
 
 ## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？
@@ -30,8 +30,10 @@ Encoder-decoder-T5 / BART:Encoder 處理輸入、Decoder 一邊用 cross-attenti
 
 # part06 Large Language Models 
 ## 名詞理解 
-
-
-
+1.LLM(大型語言模型)  
+狹義:現代 LLM 的「標準配方」。Decoder-only Transformer、自回歸（Autoregressive）與 Next-token Prediction、規模門檻    
+廣義:以「能力湧現」為導向。In-context Learning(上下文學習)  
+Decoder-only + 自回歸 + 海量資料預訓練」這套成功方程式（Recipe）至今依然是業界普世標準。  
+2.Pretraining recipe(預訓練標準)  
 
 
