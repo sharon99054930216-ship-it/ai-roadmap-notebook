@@ -26,7 +26,7 @@ Encoder-decoder-T5 / BART:Encoder 處理輸入、Decoder 一邊用 cross-attenti
 
 ## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？
 (a)單看文字說明會不太清楚，搭配李宏毅老師的影片可以了解得更清楚:https://www.youtube.com/watch?v=hYdO9CscNes  
-(b)  
+(b)之後補上  
 
 # part06 Large Language Models 
 ## 名詞理解 
@@ -35,5 +35,24 @@ Encoder-decoder-T5 / BART:Encoder 處理輸入、Decoder 一邊用 cross-attenti
 廣義:以「能力湧現」為導向。In-context Learning(上下文學習)  
 Decoder-only + 自回歸 + 海量資料預訓練」這套成功方程式（Recipe）至今依然是業界普世標準。  
 2.Pretraining recipe(預訓練標準)  
-
-
+Data Preparation（數據準備）→ Tokenizer Training（分詞器訓練）→ Tokenization & Packing（數據打包）→ Model Architecture（模型架構）→ Optimizer Setup（最佳化器設定）→ Loss Function（損失函數）→ Massive Training（大規模預訓練）→ Mid-training / Annealing（中期強化）→ Long-context Extension（長文本擴展）→ Post-training（後訓練與對齊）  
+3.Data - LLM   
+Data Mix 的黃金配比:Web (50-70%) 提供模型的「常識與通識」，是廣度的基底，Code (10-25%) & Math (2-8%) 不是為了讓模型當工程師，而是為了培養 Reasoning（推理）與 Chain-of-Thought（思維鏈）能力，Synthetic Data (5-30%)：用大模型生成高質量數據來餵養新模型（合成數據）已成為標配  
+Dedup（去重):重複資料刪除，防止發生過擬合。    
+4.Tokenizer(分詞器/標記器):將人類文字拆解成多個稱為 Token（詞元） 的微小單位，並將其轉換為模型能理解的數字
+Tokenizer 影響什麼:
+壓縮率 (Compression Ratio):好的 Tokenizer 能在高頻詞（如中文、常見 Code 語法）上有更高的壓縮率。同樣的上下文視窗內能塞入更多實質內容、推理速度變快、預訓練時的算力浪費變少。  
+多語言公平性 (Multilingual Fairness):早期 (GPT-2)： 對中文支援極差，採取 Byte-by-byte 分詞，一個繁/簡漢字可能被拆成 3 個 Token。導致同樣一本書，中文訓練成本是英文的 3 倍。現代： 現代主流 Tokenizer 擴大了詞表，大幅優化（中日韓）的分詞，讓一個漢字儘量等於 1 個 Token。  
+數學算術能力 (Digit-level Splitting):過去模型算術差，部分原因是因為 12345 有時被切成 12 和 345，有時被切成 123 和 45，導致模型難以學習位值概念。現代解法：模型在 Tokenizer 階段將數字逐位拆分（例如 123 必然拆成 1、2、3），這極大地改善了模型的底層數學算術與對齊能力。  
+邊緣案例(Edge Cases):如結尾空格、複雜 Emoji、跨語言混雜等場景。Tokenizer 在這裡處理不當，會導致模型產生語意斷層，進而引發模型輸出陷入死循環或胡言亂語的怪異 Bug。  
+5.MoE(混合專家模型):是一種機器學習架構，它將大型神經網絡拆分成多個專精不同子任務的「專家」子網絡。透過「路由（Router）」機制的調配，每次計算只會激活少數幾個專家。這項技術能在不大幅增加運算資源的情況下，使模型容量達到兆級參數規模。  
+6.Long context(長上下文)怎麼做到的:   
+位置編碼的數學外推:在數學上「縮小或平滑」旋轉位置編碼（RoPE）的頻率基數  
+分階段的 Long-context Training 流水線:1. Base 階段： 先用 4k 或 8k 的短文本吃滿 90% 的 Token，2.修改 RoPE 超參數，餵入少量（幾十 B Token）經過特別清洗的長文檔，在短時間內將模型「拉長」到目標長度。  
+Attention 機制變體  
+Ring Attention： 將 Attention 的計算沿著序列維度切片，分發到多個 GPU 組成的「環形網絡」中並行計算，打破單張 GPU 的記憶體限制。  
+Hybrid SSM-Attention： 將 Attention 與 Mamba / SSM（狀態空間模型，具備 O(N) 線性複雜度）混合交替。利用 SSM 處理超長背景，只在關鍵層保留 Attention，大幅降低計算開銷。
+推論優化   
+PagedAttention:像作業系統的虛擬記憶體分頁一樣，將不連續的 KV Cache 記憶體碎片化管理，完全消除記憶體碎片。  
+KV Cache 量化： 將幾十 GB 的 FP16 KV Cache 壓縮到 INT8 或 INT4，直接讓單卡能容納的 Batch Size 與長度翻倍。  
+7.
