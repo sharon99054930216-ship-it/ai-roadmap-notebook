@@ -26,7 +26,7 @@ Encoder-decoder-T5 / BART:Encoder 處理輸入、Decoder 一邊用 cross-attenti
 
 ## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？
 (a)單看文字說明會不太清楚，搭配李宏毅老師的影片可以了解得更清楚:https://www.youtube.com/watch?v=hYdO9CscNes  
-(b)之後補上  
+(b)Transformer計算量隨長度呈二次方暴增，處理長文本極耗記憶體。  
 
 # part06 Large Language Models 
 ## 名詞理解 
@@ -69,6 +69,7 @@ Anthropic 的解法 ： 寫下一份「憲法/守則」（Constitution，例如�
 
 ## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？
 (a)LLM的定義、預訓練標準流程、Tokenizer的影響、MoE的學習架構、對話模型需要的prompt
+(b)LLM僅靠預測計算出下個字，缺乏邏輯、易幻覺且算力昂貴。
 
 # part07 Vision-Language Models
 ## 名詞理解 
@@ -89,5 +90,11 @@ LLaVA 屬於多模態神經網路模型，主要包含三大核心模組：
 方案一:直接放大，當輸入圖片變大，ViT 的 Patch 數量會從 24x24 暴增到 72x72。這時必須對 ViT 原本的 2D 絕對位置編碼進行雙線性插值  
 方案二:動態切片與縮圖拼接(Tile / AnyRes)，不改變 Vision Encoder（如 CLIP-ViT）的輸入規格，而是透過圖像切片與縮圖拼接來兼顧全局與局部細節  
 方案三:原生動態解析度(Native Dynamic)，拋棄了繁瑣的「切片 + 縮圖」預處理，讓 Vision Encoder 直接原生支援任意解析度的輸入  
-6.
+6.資料工程(Data):
+
+
+
+
+
+
 
