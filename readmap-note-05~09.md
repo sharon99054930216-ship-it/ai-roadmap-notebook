@@ -101,7 +101,25 @@ Stage 2:精緻且深入的「對話」資料 (Visual Instruction Tuning)
 原生派（Native Multimodal / GPT-4o 範式):  
 對稱性（Any-to-Any）： 輸入是 Token（文字、像素、音訊），輸出也是 Token（文字、像素、音訊）。模型可以直接預測下一個視覺 Token 來「畫圖」，或是預測下一個音訊 Token 來「發聲」。  
 流暢無縫（Fluid）： 語音對話不需要中介層，模型直接用音訊 Token 進行思維。它能聽懂你的嘆氣、能在回答時帶有幽默的語調，甚至能打斷你的說話。  
-8.Grounding(視覺定位)，GUI (智能體)  
+8.Grounding(視覺定位)，GUI (智能體)    
+Robotics：精確指出畫面上要抓取或互動的物件位置，是 VLA模型的關鍵前置。   
+UI Debug：在軟體測試中，能直接指出畫面上哪一個元素排版跑版或出錯。  
+實際作法  
+數字字串化：讓模型像說話一樣，直接預測並輸出代表座標的數字字串（例如生成 " [0.3, 0.4, 0.6, 0.7] "）。  
+擴展詞表：將 Bounding Box 的座標範圍當作特殊的 Special Token（例如 <box_0> 等）直接放入模型的 Vocab 中，提高編碼與輸出效率。  
+9.Video    
+Sparse Sampling(稀疏採樣):不管影片多長，只均勻抽取其中的 8 / 16 / 32 幀（Frames）。每幀當作一張獨立圖片過 ViT，再拼起來丟給 LLM。   
+Temporal Pooling(時空池化):在時間維度上運作。例如把相鄰 4 幀在同一個空間位置的 Token 拿出來做平均或拼接後用 Linear 層降維。  
+Memory Module(記憶體模組):模型不一次性看完所有幀，而是設計一個固定大小的「記憶庫（Buffer）」。  
+Dedicated Video Encoder(專用影片編碼器):直接使用 3D Transformer（同時在橫向、縱向、時間軸三個維度做 Attention）在海量影片資料上做預訓練，讓 Encoder 輸出的每一個 Token 原生就包含了一小段時間內的動態語意。  
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？
+(a)VLM 多了視覺、CLIP的核心概念、LLaVA核心模組、高解析度解決方案  
+(b)VLM 存在空間幾何盲區、長影片推理弱、高解析度 Token 爆炸等底層硬傷  
+
+# part08 Vision-Language-Action
+## 名詞理解 
+
 
 
 
