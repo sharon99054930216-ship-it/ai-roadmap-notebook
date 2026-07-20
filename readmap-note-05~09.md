@@ -119,7 +119,16 @@ Dedicated Video Encoder(專用影片編碼器):直接使用 3D Transformer（同
 
 # part08 Vision-Language-Action
 ## 名詞理解 
-
-
-
+1. 過去十年 robotics 的主流  
+Classical Control + Motion Planner（傳統控制派）:依賴精確的 3D 幾何感測器（如光達、深度相機）重建環境，利用逆運動學和軌跡規劃算法來計算馬達轉角。  
+Behavioral Cloning (BC / 行為複製 / 模仿學習):讓人類專家手動遙控機器人錄製 100 次「打開微波爐」的示範資料，然後用監督式學習強行讓神經網路背下「影像 → 馬達關節角度」的映射。  
+Reinforcement Learning (RL / 強化學習):因為在現實世界撞壞機器人很貴，所以把機器人丟進模擬器裡，用 PPO、SAC 算法讓它瘋狂試錯幾億次，再透過 Sim-to-Real 技術遷移到實體機器人上。  
+VLA idea：通常會將這些連續的數值對齊並歸一化（例如縮放到 [-1, 1] 之間），然後將這個區間均勻切成 256 或 1000 個格子。  
+2.RT-2(Robotics Transformer 2):不需要為機器人設計特異的架構，只要把控制訊號(動作)『文字化』，規模化後的 VLM 就能原生展現出驚人的具身智能。  
+賦予機器人強泛化力:當機器人面對從未見過的物體形狀、包裝、或是反光環境時，依然能看懂並成功執行任務。  
+簡化機器人控制架構:訓練與推理時，輸入「圖像+語言指令」，輸出端就直接自回歸預測出 Action Token 序列。  
+3.OpenVLA:解決了 RT-2 因為參數過大（55B）、代碼與權重閉源而無法在學術界和中小企業落地的痛點。  
+DINOv2 + SigLIP:負責看懂「這是什麼物體」、「環境裡有什麼」; 自監督學習的視覺模型。  
+Open X-Embodiment:匯集了全球超過 20 個機構、22 種不同機器人平台、高達 97 萬個操作片段的軌跡資料，並將其全部標準化。  
+LoRA 微調:OpenVLA 在架構上就是標準的 Vision Encoder + Projector + LLM，只是輸出端換成了 Action Token。  
 
