@@ -131,4 +131,14 @@ VLA idea：通常會將這些連續的數值對齊並歸一化（例如縮放到
 DINOv2 + SigLIP:負責看懂「這是什麼物體」、「環境裡有什麼」; 自監督學習的視覺模型。  
 Open X-Embodiment:匯集了全球超過 20 個機構、22 種不同機器人平台、高達 97 萬個操作片段的軌跡資料，並將其全部標準化。  
 LoRA 微調:OpenVLA 在架構上就是標準的 Vision Encoder + Projector + LLM，只是輸出端換成了 Action Token。  
-
+4.π_0  
+Action Chunking:π_0一口氣預測未來 50 個步長的連續動作軌跡。  
+Flow Matching運作流程:  
+VLM 大腦感知：PaliGemma (3B) 看著影像與「打蛋」的指令，輸出高層級的語意特徵。  
+動作專家去噪：Action Expert（一個輕量 Transformer）接收這個 VLM 隱向量，並拿著一串純隨機的噪聲。  
+生成：透過 Flow Matching 算法，僅需極少步數的去噪，就直接將這串噪聲轉化為一條平滑、連續的 50 步物理動作軌跡。  
+5.Data  
+Open X-Embodiment:具身智能界的 ImageNet。 首次將跨機構、跨機械臂的資料標準化，是 OpenVLA、RT-2 的底座。但資料品質參差不齊。  
+DROID:高質量、多場景。 研發人員把機械臂搬到真實的家庭、辦公室、戶外環境中採集，專治模型「離開實驗室就崩潰」的毛病。  
+BridgeData V2:專精於特定高頻場景（切菜、收碗盤、抓取），是做專業服務型機器人的高純度滋養料。  
+Sim2Real:利用 GPU 強化學習，在虛擬物理引擎裡同時運行 10,000 個 機器人手臂，幾小時內就能刷出幾億個步長的物理經驗。  
