@@ -1,4 +1,4 @@
-# part05 The Transformer
+8# part05 The Transformer
 ## 名詞理解
 1.Transformer:解決不能平行，長距離依賴性弱的問題  
 2.Self-Attention:  
@@ -175,6 +175,37 @@ Generalization(抽象泛化能力降維打擊):機器人無法像人一樣把「
 (a)VLA的動作傳統與現在控制上的差異、RT-2能將動作文字化、OpenVLA解決參數過大問題、π_0能預測未來50步長的運動軌跡、機器人為何還沒實際在家普及使用原因  
 (b)10.   
 
-
+# part09 Geometry Foundation Models  幾何基礎模型
+## 名詞理解 
+1.古典 3D Pipeline vs. DUSt3R  
+古典 3D Pipeline (COLMAP / OpenMVS)  
+[圖片] ──► SIFT 特徵提取 ──► RANSAC 匹配 ──► SfM (BA 求解 Pose) ──► MVS 密集深度 ──► Poisson 網格化  
+核心機制：分階段的多視角幾何（Multi-View Geometry）數學推導。  
+痛點  
+非可微與誤差雪崩：步驟間獨立，前一步（如 SIFT 錯配）的誤差會放大成後續的幾何崩潰。  
+弱紋理/重複紋理失效：白牆、玻璃、地板磚找不到特徵點，直接掛掉。  
+強依賴初始條件：需要高重疊度、連續視角、最好有 EXIF 相機內參（K）。  
+計算極慢：Bundle Adjustment (BA) 與密集 MVS 需數分鐘至數小時。  
+DUSt3R：通用 3D 模型 (GFM) 的破局  
+核心洞察 (Insight)：  
+廢除「先解相機姿態、再解深度」的傳統順序。3D 重建的本質就是 Pointmap Regression —「給每個像素 (u,v) 直接指派一個 3D 空間座標 (X,Y,Z)」。  
+2.傳統流程 vs. DUSt3R 的根本差異
+傳統做法 (如 COLMAP)：需要先尋找特徵點 ──► 幾何匹配 ──► 解相機角度 (SfM) ──► 算密集深度 (MVS) ──► 建立 3D 網格。流程極長，只要某一環節（例如牆面太平滑找不到特徵點）出錯，整條流水線就會崩潰。  
+DUSt3R：直接丟兩張隨手拍的照片給 Transformer 大模型，模型會直接輸出兩張圖像對應的 Pointmap（3D 點雲圖）。這張矩陣上記錄了每個像素在 3D 空間中的 (X, Y, Z) 座標。  
+3.DUSt3R 架構   
+核心概念：為什麼用 Pointmap (H x W x 3)？  
+傳統 3D 視覺將深度 (Depth)、相機姿態 (Camera Pose R, t)、相機內參 (Intrinsics K) 拆分為獨立的變數分別估算；DUSt3R 則將它們統一收斂為一個萬能表示法：密集 3D 點雲圖  
+定義：對一張解析度為 H x W 的影像，模型直接預測一個大小為 H x W x 3 的張量。畫面中每個像素 (u, v) 都直接對應一個 3D 空間座標 (X, Y, Z)。  
+4.什麼是 Pointmap（3D 點雲圖）  
+Pointmap 是 DUSt3R 的精髓。給定兩張照片，模型會將兩張圖的所有像素，統一轉換到第一張相機的座標系下。  
+因為這張 Pointmap 已經包含了空間中所有點的相對位置：  
+深度：直接讀取點雲的 Z 軸數值就是深度。  
+相機姿態與焦距：不需要 EXIF 資訊或提前校準相機，事後用簡單的幾何演算法（如 PnP）就能從預測好的點雲倒推回相機的位置與角度。  
+3D 結構：扣除低信心度（如天空、過渡邊緣）的噪點後，剩下的點直接就是現成的 3D 場景。  
+5.模型如何運作   
+特徵提取：兩張影像分別通過共享權重的 ViT Encoder 轉成特徵 Token。  
+幾何比對：將兩組 Token 送入具備 Cross-Attention 的 Decoder，讓模型自動比對兩張圖之間的視差、物體形狀與前後遮擋關係。  
+預測輸出：模型同時吐出兩張圖的 Pointmap 以及對應的「信心度矩陣（Confidence Map）」，用來自動過濾掉無效或無法預測的區域。  
+多視角全局對齊：如果有幾十張照片，只需兩兩做 DUSt3R 預測，最後跑幾秒鐘的圖優化（Pose Graph Optimization），就能將所有照片的點雲迅速拼接到同一個全局 3D 世界中。  
 
  
