@@ -207,5 +207,45 @@ Pointmap 是 DUSt3R 的精髓。給定兩張照片，模型會將兩張圖的所
 幾何比對：將兩組 Token 送入具備 Cross-Attention 的 Decoder，讓模型自動比對兩張圖之間的視差、物體形狀與前後遮擋關係。  
 預測輸出：模型同時吐出兩張圖的 Pointmap 以及對應的「信心度矩陣（Confidence Map）」，用來自動過濾掉無效或無法預測的區域。  
 多視角全局對齊：如果有幾十張照片，只需兩兩做 DUSt3R 預測，最後跑幾秒鐘的圖優化（Pose Graph Optimization），就能將所有照片的點雲迅速拼接到同一個全局 3D 世界中。  
-
+6.MASt3R · matching  
+MASt3R 的做法是在 DUSt3R 的 Transformer 輸出端，額外掛載了一個特徵描繪子頭（Dense Feature Head）  
+它的特徵向量裡面，原生融合了 3D 幾何空間資訊與高層級語意。  
+即使兩張圖片視角相差 90 度，或者一張是白天、一張是黑夜，MASt3R 依然能精確指認「這張圖左下角的像素，對應的就是那張圖右上角的像素」。  
+DUSt3R 解決了 「看懂 3D 場景」 的問題。  
+MASt3R 解決了 「精準黏合像素」 的問題。  
+7.VGGT  
+一次 Forward 通吃 1 ~ 200+ 張照片，輸入任意數量的照片，模型直接一步輸出整個場景所有的 3D 幾何屬性，完全不需要幾何後處理的最佳化過程。  
+Camera Head：自動預測每張圖的相機內參 (K) 與外參 (R, t)。  
+Depth Head：輸出每張圖的密集深度圖。  
+Point Head：輸出統一在世界座標系（World Frame）下的 3D Pointmap。  
+Track Head：給定任意 Query Point，跨視角追蹤其 3D 運動軌跡（3D Point Tracking）。  
+Killer Feature:可以在 1 秒內處理 100+ 張影像，速度比傳統 COLMAP 快 100x ~ 1000x，且重建品質與泛化能力全面超越需要繁瑣最佳化的古典方法。  
+VGGT 證明了：當模型規模與 Transformer 的全局注意力能力足夠強時，多視角幾何（Multi-View Geometry）可以被神經網路完全隱式學習並一次性解出。  
+它結束了 3D 視覺長期依賴「先匹配、再優化、後重建」的碎片化工具鏈時代，正式將 3D 電腦視覺帶入大型 Feed-forward 基礎模型的新紀元。  
+8.Data  
+DUSt3R 與 VGGT 這類 3D 基礎大模型（GFM），必須採用 Multi-Dataset Co-Training（多數據集聯合混血訓練），融合十幾個不同領域的 3D 資料庫來補足彼此的短板。  
+室內場景 (Indoor):真實房間的 RGB-D 結構、物體遮擋關係、相機軌跡  
+物體導向 (Object-Centric):360 度環繞多視角物體幾何、局部細節  
+戶外與駕駛 (Outdoor):大尺度城市幾何、長距離深度、極端光照變化  
+合成數據 (Synthetic):100% 精確的完美 Ground Truth（光滑無噪聲的 Depth & Pose）  
+野外網絡數據 (In-the-Wild):龐大無窮的場景多樣性與真實物體紋理  
+9.下游任務-影響面  
+SLAM:  
+技術更迭：以 MASt3R-SLAM 與 VGGT-SLAM 為代表的神經網路方案，正在全面取代傳統的 ORB-SLAM 系列。  
+關鍵優勢：不再依賴傳統手工特徵點，克服了無紋理白牆、高動態模糊及光影劇變導致追蹤丟失的硬傷。  
+Gaussian Splatting 初始化:  
+擺脫時間瓶頸：傳統 3DGS 渲染極快，但前置準備需要跑 COLMAP（幾十分鐘）來算相機姿態與初始點雲。   
+秒級推導：現在改用 DUSt3R / VGGT，可在 1 秒內直接直出相機 Pose 與密集點雲，讓 3DGS 初始化幾乎零等待。   
+NVS / Free Viewpoint（新視角合成與自由視角）:  
+極簡輸入：使用者只需提供幾張隨手拍攝的照片，模型就能自動推斷與補全未拍攝角度的幾何與紋理。  
+影視級效果：可輕鬆生成流暢的自由視角切換與「子彈時間」效果。  
+Robotics Perception（機器人空間感知）：  
+去感測器化：機器人不再強烈依賴昂貴且容易受強光/玻璃干擾的專用深度感測器（如 RGB-D 相機、LiDAR）。  
+純 RGB 直出 3D：僅靠普通單眼或多眼 RGB 鏡頭，即可直接推導出具備度量尺度的 3D 場景，大幅降低硬體成本。  
+AR Scene Understanding（擴增實境空間理解）：  
+頭顯追蹤升級：適用於 Apple Vision Pro、Meta Quest 等裝置的 Inside-Out Tracking。  
+實時空間錨定：秒級建構房間的 3D 網格（Mesh），實現虛擬物件與真實世界的精確碰撞與物理遮擋。  
+Video Editing（影片編輯與特效後製）：  
+自動鏡頭追蹤：取代傳統特效繁瑣的人工標定 Matchmoving 流程，自動計算精確的鏡頭移動軌跡。  
+無縫 3D 物件植入：利用精確的 3D Pointmap，可將虛擬 3D 模型無縫貼合放置在真實場景的特定表面上。  
  
