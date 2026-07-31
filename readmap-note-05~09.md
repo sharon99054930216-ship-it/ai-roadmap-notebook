@@ -1,4 +1,4 @@
-8# part05 The Transformer
+## part05 The Transformer
 ## 名詞理解
 1.Transformer:解決不能平行，長距離依賴性弱的問題  
 2.Self-Attention:  
