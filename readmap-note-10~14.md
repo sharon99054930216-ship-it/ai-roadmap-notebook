@@ -40,12 +40,29 @@ Nsight Systems:NVIDIA 系統級分析工具，觀察 CPU、GPU、網路與 API �
 硬體天花板與 Ridge Point（以 H100 為例）  
 當你的 Kernel 的算術強度低於硬體的 Ridge Point（例如只有 10 FLOP/Byte），盲目買更貴、算力更高的 GPU 也完全救不了效能，因為瓶頸根本不在運算能力，而在 HBM 頻寬。  
 唯一解法：透過優化將資料留在晶片內的 SMEM / Register 進行重複利用（Data Reuse），降低對 HBM 的依賴。  
+7.FlashAttention   
+Tiling + Online Softmax（前向傳播不落地）  
+Tiling：將 K, V 切成小 Block 載入高速的 SMEM 中。  
+Online Softmax：利用數學技巧在分塊迭代的過程中，動態更新 running max 與 running sum（無需等整列算完才能算 Softmax 分母）。  
+結果：永遠不 Materialize（生成）完整的 N x N 矩陣，中間結果全留在 Register / SMEM 內，最後只把最終的 O_i 寫回 HBM（僅 1 次 HBM 讀寫）。  
+Recompute backward（反向傳播時「用算力換記憶體」）    
+反直覺的優化：傳統需要把 N x N 的中間矩陣存起來供 Backward 使用。FlashAttention 在 Backward 時乾脆重新算一遍。  
+物理依據：現代 GPU 的 FLOPs（算力）遠比 HBM 頻寬充裕。把資料從 HBM 讀寫一次的時間，足夠 GPU 重新把運算跑好幾次。因此「重算」反而比「從 HBM 讀寫」更快、更省記憶體。  
+8.名詞表
+Bank Conflict (記憶體衝突):Shared Memory (SMEM) 劃分為 32 個 Banks。當同一 Warp 的多個 Thread 同時存取同一個 Bank 不同的 Address 時發生。  
+Coalesced Access (合併讀取):同一 Warp 內連續的 Thread 讀取連續的記憶體位址。  
+Async Copy / TMA (非同步記憶體傳輸):以 H100 的 TMA (Tensor Memory Accelerator) 為代表，支援背景非同步將資料從 HBM 搬到 SMEM。  
+Tensor Core (矩陣乘法加速器):專為半精度/低精度（FP16/BF16/FP8）矩陣乘法打造的硬體 ASIC，一個 Cycle 能吞掉一個小矩陣乘加。  
+Roofline Model (效能天花板模型):以算術強度 (FLOP/byte) 為 X 軸、吞吐量為 Y 軸的模型。  
 
-
-
-
-
-
-
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)
+從傳統的 CUDA C++（Thread-Level） 到現代的 Triton（Block-Level），GPU 編程正在從「手動微觀控制每個執行緒與記憶體位址」轉向「以 Tile 陣列為單位的自動化編譯優化」。  
+FlashAttention 透過演算法與硬體資料流的重組（Tiling + Online Softmax），硬生生將 Attention 的算術強度從 ~ 1 拉到 ~ 50+，解決了長文本的記憶體瓶頸。  
+當 Kernel 算術強度低於硬體 Ridge Point 時，盲目追求算力或買更貴的 GPU 是無解的，唯一解法是透過 Tiling 與 Kernel Fusion 將資料留在晶片內的 SRAM（SMEM / Register）中重複利用。  
+Profiling 工具（torch.profiler → Nsight Systems → Nsight Compute）構成了一套從應用層到微觀 Kernel 級的完整除錯與優化閉環。  
+(b)
+傳統 CUDA 開發的極高門檻與脆弱性:開發者必須手動處理複雜的索引計算、__syncthreads() 同步屏障以及記憶體對齊。程式碼冗長（往往比 Triton 多出 10 倍以上），且極易因一個微小的邊界疏忽或 Warp Divergence 導致效能崩潰或數值錯誤。  
+傳統深度學習算子（如 Naive Attention）的頻寬浪費:傳統實作將每個小運算（Matmul、Scale、Mask、Softmax、Dropout）拆成獨立的 Kernel。中間產生的巨型矩陣（如 N x N 的 Attention Matrix）必須不斷寫回慢速的 HBM 再讀出來。這造成了巨大的記憶體頻寬浪費O(N^2) 空間複雜度），並使硬體陷入嚴重的 Memory-Bound 泥沼，成為限制大模型支援長上下文（Long Context）的根本物理障礙。  
 
 
