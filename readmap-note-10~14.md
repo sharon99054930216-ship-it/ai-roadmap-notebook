@@ -27,4 +27,25 @@ Kernel Fusion（算子融合）
 Occupancy（佔有率）  
 GPU 依靠超多執行緒來掩蓋延遲。   
 當某個 Warp 因為等待 HBM 讀取而阻塞時，SM 的 Warp Scheduler 會瞬間切換至另一個就緒的 Warp 繼續執行計算。  
-5.Profile   
+5.Profile    
+Roofline Model:X 軸：算術強度 (Arithmetic Intensity, AI)，Y 軸：實際吞吐量 (Throughput / Performance)，斜線區：Bandwidth Bound 特徵：算術強度低，計算單元（ALU/Tensor Core）常處於等待資料傳輸的空轉狀態。水平線區：Peak FLOPS 特徵：算術強度高，記憶體頻寬已不是瓶頸，硬體計算核心已滿載。  
+Nsight Compute:專為單一自訂 CUDA / Triton Kernel 打造的硬體級調優工具。  
+Nsight Systems:NVIDIA 系統級分析工具，觀察 CPU、GPU、網路與 API 之間的宏觀互動。  
+6.Memory-bound vs Compute-bound  
+算術強度 (Arithmetic Intensity, AI):代表每從記憶體（HBM）搬移 1 Byte 的資料，GPU 可以進行多少次浮點運算。  
+低強度(AI < 10) —— Memory-Bound  
+瓶頸：HBM 記憶體頻寬餵不夠快，運算核心（Tensor Core / ALU）經常處於餓死、空轉的狀態。  
+高強度(AI > 100) —— Compute-Bound  
+瓶頸：記憶體頻寬充足，運算單元全速運轉，達到硬體極限。  
+硬體天花板與 Ridge Point（以 H100 為例）  
+當你的 Kernel 的算術強度低於硬體的 Ridge Point（例如只有 10 FLOP/Byte），盲目買更貴、算力更高的 GPU 也完全救不了效能，因為瓶頸根本不在運算能力，而在 HBM 頻寬。  
+唯一解法：透過優化將資料留在晶片內的 SMEM / Register 進行重複利用（Data Reuse），降低對 HBM 的依賴。  
+
+
+
+
+
+
+
+
+
