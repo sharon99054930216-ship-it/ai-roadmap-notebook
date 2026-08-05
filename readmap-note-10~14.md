@@ -66,3 +66,41 @@ Profiling 工具（torch.profiler → Nsight Systems → Nsight Compute）構成
 傳統深度學習算子（如 Naive Attention）的頻寬浪費:傳統實作將每個小運算（Matmul、Scale、Mask、Softmax、Dropout）拆成獨立的 Kernel。中間產生的巨型矩陣（如 N x N 的 Attention Matrix）必須不斷寫回慢速的 HBM 再讀出來。這造成了巨大的記憶體頻寬浪費O(N^2) 空間複雜度），並使硬體陷入嚴重的 Memory-Bound 泥沼，成為限制大模型支援長上下文（Long Context）的根本物理障礙。  
 
 
+## part11 Training Infrastructure
+## 名詞理解
+1.Data Parallel·最簡單    
+完整模型複本：每一張 GPU（或 Worker）都完整複製一份一模一樣的 Model Weights 與 Optimizer States。  
+Batch Shard（資料切分）：將總 Batch Size 切成多個小分片（Micro-batch），分別送往不同的 GPU 進行獨立的前向傳播（Forward）。  
+限制：Model Memory 瓶頸  
+每一張 GPU 必須完整容納整個 Model（包含模型參數、梯度、Optimizer 狀態以及 Activation 記憶體）。  
+隨著大語言模型進入 Billion-scale（百億、千億參數） 時代，單張 GPU 的 HBM（例如 80GB）根本塞不下完整的模型與狀態。  
+2.ZeRO / FSDP · 切 optimizer  
+Stage 1：切分 Optimizer States (切優化器狀態)  
+將 Optimizer States 平均切成 N 份，分存到 N 張 GPU 上。每張卡只負責更新自己分配到的那部分參數。  
+Stage 2：加切 Gradients (同時切分梯度)  
+不僅切 Optimizer States，連 Gradients 也一併切片。當 Backward 算完某個分片的梯度時，直接 Reduce-Scatter 到對應負責的 GPU 上。  
+Stage 3：加切 Parameters (同時切分模型參數) → FSDP  
+連 Model Parameters 本身也徹底切碎（Sharding）分存。  
+3.Tensor Parallel · 切矩陣  
+切分方式 (Column-wise & Row-wise Sharding)  
+Attention 層 (QKV Projection)：將 Q、K、V 的權重矩陣沿著 Attention Head 維度橫向或縱向切開，每張 GPU 只計算一部分的 Heads。  
+MLP / FFN 層：將第一層權重（Col-wise）沿 Hidden Dimension 切開，第二層權重（Row-wise）相對應地切開，讓計算結果能在區塊內完美銜接。  
+使用時機:當模型大到單一層（Single Layer）的權重矩陣根本塞不進單張 GPU 的 HBM 時，必須透過 Tensor Parallelism 將運算與權重拆開。  
+4.Pipeline Parallel · 切層  
+將模型的 N 個 Layers 垂直切成 K 個連續的區段（Stages），依序指派給 K 張（或 K 組）GPU  
+痛點:在流水線剛啟動（Filling）與快結束（Draining）時，後段或前段的 GPU 因為拿不到資料而被迫處於閒置狀態（Idle）。這段空白期稱為 Pipeline Bubble，會直接降低硬體的整體運算利用率（MFU）。   
+5.3D / 4D Parallel · 組合拳  
+以超大規模叢集（如 16k GPUs）為例的典型配置：  
+TP = 8 (Tensor Parallelism)：嚴格限制在單機內部（Intra-node），利用 8 張 GPU 透過高速 NVLink 扛住巨大通訊量。  
+PP = 16 (Pipeline Parallelism)：將模型垂直切成 16 個 Stages，跨越不同的機器節點串聯。  
+DP = 128 (Data Parallel / FSDP)：在巨型叢集規模下，將剩餘的節點組成 128 個資料平行群組，同步模型梯度。  
+EP = N (Expert Parallelism, 專家平行)：若模型採用 MoE (Mixture of Experts) 架構（如 DeepSeek-V3），則會引入 EP，將不同的 FFN 專家（Experts）分佈到不同的 GPU 上。  
+總 GPU 數量計算:Total GPUs = TP x PP x DP x EP = 8 x 16 x 128 x (EP Factor) = 16k+ GPUs  
+6.
+
+
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)
+
+(b)
