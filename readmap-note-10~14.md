@@ -96,6 +96,16 @@ PP = 16 (Pipeline Parallelism)：將模型垂直切成 16 個 Stages，跨越不
 DP = 128 (Data Parallel / FSDP)：在巨型叢集規模下，將剩餘的節點組成 128 個資料平行群組，同步模型梯度。  
 EP = N (Expert Parallelism, 專家平行)：若模型採用 MoE (Mixture of Experts) 架構（如 DeepSeek-V3），則會引入 EP，將不同的 FFN 專家（Experts）分佈到不同的 GPU 上。  
 總 GPU 數量計算:Total GPUs = TP x PP x DP x EP = 8 x 16 x 128 x (EP Factor) = 16k+ GPUs  
-6.
+6.Memory · activation checkpointing 與 offload  
+Activation Checkpointing (活性值檢核點 / 空間換時間):Forward 時刻意不儲存大部分層的 Activations，只保留少數關鍵節點（Checkpoints）。等到 Backward 需要時，再從最近的 Checkpoint 重新執行一次 Forward 算出來。代價：運算量增加約 33%（因為部分的前向計算被執行了兩次）。這是一場極其划算的「用計算時間換取寶貴 HBM 空間」的交易。  
+CPU / NVMe Offloading (記憶體卸載):當模型大到連 FSDP 切片後還是塞不進 GPU 的 HBM 時，可以將暫時用不到的資料（例如 Optimizer States 或甚至部分的 Model Parameters / Gradients）搬移（Offload）到 CPU 主機記憶體（RAM）甚至是極速的 NVMe SSD 中。  
+低精度訓練時代 (BF16 與 FP8)  
+BF16:擁有與 FP32 相同的動態範圍（8-bit exponent），徹底解決了 FP16 容易數值下溢（Underflow）或溢出（Overflow）的痛點。自 2022–2024 年起已成為大模型訓練的預設基礎資料類型。  
+FP8:在 H100、B100 等新一代硬體上，FP8 支援硬體級的張量加速。  
+7.容錯  
+定期 Asynchronous Checkpoint (非同步檢查點存檔):採用非同步存檔（Async Checkpoint）。在 背景（Background）透過雙緩衝區將模型狀態緩慢傾印（Dump）到高速的 NVMe 儲存池或遠端 Blob 儲存（如 S3），主訓練迴圈完全不被卡住。  
+Health Check 與自動備援替換 (Spare Node Auto-Swap):叢集監控系統持續進行心跳檢測（Health Check）。一旦偵測到某張 GPU 或節點出現異常（如 ECC 記憶體錯誤激增、溫度過高或 Kernel 逾時），調度系統會自動將故障節點隔離，並無縫替換為預備的 Spare Node。  
+Deterministic Replay (確定性重放與可重現性):透過固定亂數種子、強制算子執行順序等技術實現 Deterministic Replay，確保訓練過程具備高度的 Reproducibility（可重現性）。  
+
 
 
