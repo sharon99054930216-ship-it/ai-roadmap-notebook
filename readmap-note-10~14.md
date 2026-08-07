@@ -106,6 +106,39 @@ FP8:在 H100、B100 等新一代硬體上，FP8 支援硬體級的張量加速�
 定期 Asynchronous Checkpoint (非同步檢查點存檔):採用非同步存檔（Async Checkpoint）。在 背景（Background）透過雙緩衝區將模型狀態緩慢傾印（Dump）到高速的 NVMe 儲存池或遠端 Blob 儲存（如 S3），主訓練迴圈完全不被卡住。  
 Health Check 與自動備援替換 (Spare Node Auto-Swap):叢集監控系統持續進行心跳檢測（Health Check）。一旦偵測到某張 GPU 或節點出現異常（如 ECC 記憶體錯誤激增、溫度過高或 Kernel 逾時），調度系統會自動將故障節點隔離，並無縫替換為預備的 Spare Node。  
 Deterministic Replay (確定性重放與可重現性):透過固定亂數種子、強制算子執行順序等技術實現 Deterministic Replay，確保訓練過程具備高度的 Reproducibility（可重現性）。  
+8.主流 framework  
+PyTorch FSDP2:2024 年後的 PyTorch 官方預設標配。  
+Megatron-LM / Megatron-Core:Tensor Parallelism (TP) 與 Pipeline Parallelism (PP) 的教父級框架。  
+DeepSpeed:ZeRO 技術的發源地與早期推動者。   
+Ray Train:叢集調度與超參數搜尋引擎。  
+9.fat tree / rail-aligned  
+Intra-node (節點內部):8 張 GPU 透過 NVLink + NVSwitch 實現全互聯（Fully Connected），提供高達 900 GB/s 雙向頻寬。   
+Inter-node (節點之間):每張卡透過 InfiniBand (如 NDR 400 Gbps × 8 = 3.2 Tbps per node) 或 RoCE 網路卡對外連線。  
+Topology (拓撲設計):像樹狀結構一樣，愈往核心交換器（Spine Switch）頻寬愈大，確保任意兩點之間都能維持固定的高頻寬。  
+10.名詞表   
+NCCL(NVIDIA Collective Communications Library):GPU 叢集上的通訊基石（相當於分散式運算世界的 MPI），專門最佳化 GPU 之間的集體通訊效率。  
+All-Reduce (同步梯度):每張卡持有部分資料（如梯度），透過 Ring 或 Tree 演算法將所有卡的資料相加後，讓每張卡都拿到完整加總結果，是 Data Parallelism 實現同步的關鍵。  
+All-to-All (MoE 專屬通訊):每張卡需要將不同的 Token 派發給對應的 Expert 所在卡上。  
+Bubble (Pipeline 氣泡):Pipeline Parallel 啟動與收尾時，部分 GPU 因為拿不到資料而被迫閒置的時間比例。Stage 越多，Bubble 通常也越大，需透過 1F1B 等排程來克服。  
+Mixed Precision (混合精度訓練):保留 FP32 Master Weights 確保數值穩定，而前向/反向傳播採用 BF16 或 FP8。  
+RDMA / IB (InfiniBand / RoCE):允許遠端 GPU 直接讀寫彼此的記憶體，全程繞過 CPU 與作業系統核心（Kernel Bypass）。提供高達數百 Gbps 的頻寬，是跨節點（Inter-node）萬卡訓練的命脈。  
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)  
+從百億到千億甚至上兆參數的 Frontier Models（如 LLaMA 3 405B、DeepSeek-V3），單張 GPU 的 HBM 根本無法容納模型，催生了高度複雜的 3D / 4D 混合平行化架構（TP + PP + DP/FSDP + EP）。  
+Meta 在 LLaMA 3 訓練中經歷了數百次自動中斷與恢復，體會到在 10k+ GPU 規模下，硬體故障不再是例外，而是必然會發生的常態。  
+通訊頻寬與尾端延遲（Tail Latency）決定了萬卡叢集的生死。叢集的總吞吐量不取決於算力有多快，而是取決於 P99 Collective Time——只要有一張卡因為網路抖動或過熱慢了一毫秒，整張表的數萬張卡就必須集體空轉等待。  
+記憶體優化本質上是一場「用時間換空間、用通訊換容量」的權衡。  
+(b)  
+傳統資料平行（DDP）的記憶體極限與浪費:在傳統 DDP 下，每一張 GPU 都必須完整複製一份 Model Weights、Gradients 與 Optimizer States。當模型規模突破數百億參數後，單卡 HBM 根本裝不下，導致純資料平行直接失效。  
+跨機通訊頻寬的巨大鴻溝與木桶效應:儘管 InfiniBand 網路已經達到 400Gbps–800Gbps，但相較於 NVLink（900 GB/s），跨機網路依然慢了數個量級。如果平行化策略（如 TP）錯誤跨出節點邊界，龐大的通訊開銷會瞬間癱瘓整個運算叢集，導致算力利用率（MFU）慘跌。  
+
+
+
+
+
+
+
 
 
 
