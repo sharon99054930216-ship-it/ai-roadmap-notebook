@@ -136,6 +136,39 @@ Meta 在 LLaMA 3 訓練中經歷了數百次自動中斷與恢復，體會到在
 
 
 
+## part12 Diffusion & Flow Matching
+## 名詞理解
+1.DDPM  
+Forward Process (前向加噪過程):將真實影像 x_0 依照變異數排程（Variance Schedule β_t），透過馬可夫鏈逐步加入高斯噪聲。  
+Reverse Process (反向去噪過程):從純噪聲 x_T 開始，利用神經網路逐步預測並剝離噪聲，倒推回乾淨的影像 x_0。  
+2.Latent Diffusion · Stable Diffusion 起源  
+Encoder (編碼階段):使用預先訓練好的 VAE ，將高解析度的原始圖像（如 512 x 512 x 3）壓縮並對齊到低維度的 Latent 特徵空間（如 64 x 64 x 4）。  
+Latent Diffusion (潛在擴散核心):擴散模型的加噪與去噪（U-Net 或 DiT）完全在這個低維度的 Latent 空間中執行。結合 Text Prompts（透過 CLIP / T5 等文字編碼器）進行 Cross-Attention 條件導引。  
+Decoder (解碼還原階段):當擴散過程完成、在 Latent 空間去噪完畢後，透過 VAE Decoder 將 64 x 64 的 Latent 特徵還原放大為高畫質的 RGB 像素圖像（512 x 512）。  
+3.Classifier-Free Guidance  
+無須外掛分類器，直接讓神經網路本身同時具備「有條件（Conditional）」與「無條件（Unconditional）」的去噪能力。  
+在訓練過程中有一定比例（通常為 10%）的機率，隨機將條件標籤 c 替換為空標籤 ∅（Dropout condition）。  
+優點:提示詞對齊度、圖像品質。  
+代價:喪失多樣性、飽和過曝、計算成本加倍。  
+4.Flow Matching   
+拋棄繁瑣隨機過程，改用 Optimal Transport (最優運輸) 或 Conditional Flow Matching (CFM) 概念。  
+強制在真實資料 x_0 與噪聲 x_1 之間建立最短的直線軌跡，讓生成過程變成單純的向量場迴歸。  
+推論過程:從純噪聲 x_1 開始，利用數值 ODE Solver（如 Euler method 甚至是 Runge-Kutta）沿著學到的速度場 dx/dt = v_θ(x, t) 一路「直直滑向」 x_0。  
+等價關係:Flow Matching 數學上與 Rectified Flow (Liu 2022) 高度等價，兩者共同奠定了當代高速生成的理論基石。  
+5.DiT  
+Patchify：將 Latent 影像切成一塊塊的 Patches（如同 ViT），轉化為 Transformer 熟悉的 Token 序列。  
+完全基於 Transformer 架構：將 Attention Mechanism 帶入擴散模型，全面解放空間建模的能力。  
+adaLN-Zero 機制  
+DiT 捨棄傳統的簡單相加或 FiLM 層，改用 Adaptive Layer Normalization (adaLN)。  
+透過一個小型 MLP，把時間 t 與條件 c 轉化為 Scale (γ)、Shift (β) 參數，直接對 Transformer Block 的 LayerNorm 進行動態調控。  
+Zero Initialization：將 MLP 的最後一層權重初始化為 0，確保訓練初期整個 Transformer 區塊等同於 Identity Mapping（恆等映射），讓深層網路訓練極其穩定。  
+
+
+
+
+
+
+
 
 
 
