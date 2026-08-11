@@ -162,10 +162,50 @@ adaLN-Zero 機制
 DiT 捨棄傳統的簡單相加或 FiLM 層，改用 Adaptive Layer Normalization (adaLN)。  
 透過一個小型 MLP，把時間 t 與條件 c 轉化為 Scale (γ)、Shift (β) 參數，直接對 Transformer Block 的 LayerNorm 進行動態調控。  
 Zero Initialization：將 MLP 的最後一層權重初始化為 0，確保訓練初期整個 Transformer 區塊等同於 Identity Mapping（恆等映射），讓深層網路訓練極其穩定。  
+6.Video diffusion  
+Spacetime Patch:傳統影片生成將影片視為獨立的畫面幀串聯，容易造成閃爍。Sora 將影片在時間軸與空間軸上同時切片，把影片轉化為一串三維的時空 Token 序列。  
+DiT(Diffusion Transformer):結合前述的 Diffusion Transformer 架構，讓模型能夠同時處理超長距離的空間細節與時間維度的前後因果關係。  
+核心技術挑戰:  
+時間一致性:如何避免相鄰畫面之間出現不自然的抖動、形變或物件憑空閃爍。  
+長片段生成:隨著影片秒數拉長，Transformer 的記憶體消耗呈爆炸性成長（需結合 Context Parallelism 與高效 Attention 架構）。  
+相機運動與物理規律:如何精準對應複雜的相機運鏡指令（如環繞、推鏡），並符合真實世界的重力、碰撞與運動慣性。  
+物體恆存性:確保物件在被遮擋、移出畫面又移回時，其外觀、身份與材質保持完全一致，不會無故「換臉」或消失。  
+7.Sampler  
+NFE:  
+指在整個生成過程中，神經網路（Backbone）被呼叫（Forward）的總次數。  
+代價：每多一次 NFE 就代表多一次模型前向運算，直接決定了生成速度的快慢。將採樣步數從 1000 步壓到 4 步，是近年生成式 AI 落地最核心的工程突破。  
+採樣器演進與四大主流類型:  
+DDPM-NFE：1000 步。  
+特性：最原始、數學性質最穩定的隨機微分方程式（SDE）解法，但速度極慢，現今多用於理論基準而非實際推論。  
+DDIM-NFE：50 步。  
+特性：由 Song 於 2020 年提出，將加噪過程簡化為常微分方程式（ODE）。支援決定性（Deterministic）採樣，且允許跳步（Sub-sampling），大幅加速生成。  
+DPM-Solver / DPM++ - NFE：15 ~ 25 步。  
+特性：由 Lu 等人於 2022 年提出，利用高階數值 ODE 求解器。是 SDXL 的預設黃金標準，兼具極高畫質與合理速度。   
+Euler / Heun - NFE：20 ~ 30 步。  
+特性：標準的數值微分積分法，隨著 Flow Matching 的興起，其變體成為對應直線流軌跡的直覺解法。  
+8.Conditioning  
+Text:透過文字編碼器（如 CLIP、T5）將 Prompt 轉為特徵向量。  
+Image & Spatial Control:由 Zhang 於 2023 年提出的 ControlNet 改變了遊戲規則。複製一份 U-Net/DiT 的 Encoder 作為鎖定的權重分支（Zero Convolution），外接任意空間結構條件（如 Canny 邊緣、Depth 深度圖、OpenPose 骨架、Segmentation 語義分割）。  
+Reference & Identity:透過 Image Encoder（如 CLIP Image Encoder）將參考圖片轉為特徵，並透過額外的 Cross-Attention 注入到去噪網路中。  
+Inpainting / Outpainting:將圖像透過 Mask 分成「保留區」與「重繪區」。輸入時將 Mask 頻道與噪聲拼接（Concatenate）進去噪網路。  
+Action & Robotics:將機器人的視覺狀態（Images）與歷史感測器狀態（Robot State）作為 Condition，讓 Diffusion 直接生成連續的機器人動作序列（Action Chunks），展現出強大的連續控制與適應能力。  
+9.名詞表  
+Score:資料機率分佈的對數梯度（得分場）。早期 Score-based Generative Modeling 核心概念，指出擴散模型本質上是在學習把噪聲「推回」高密度資料區的向量場。  
+v-prediction:捨棄傳統僅預測噪聲 (ε) 或純影像 (x_0) 的作法，改為預測綜合兩者的速度項 v = αε -  σx_0，大幅改善了高雜訊與低雜訊區間的數值穩定性，是 SD 2.1+ 與 Flow Matching 的標準作法。  
+CFG Scale:文字到圖像（T2I）控制品質與對齊度的最大旋鈕。數值越高（如 SDXL 預設 s ≈ 7）提示詞黏著度越強，但過高會導致畫面過度飽和與失真。  
+NFE:生成一張圖所需呼叫神經網路前向運算的總次數。透過採樣器優化與蒸餾技術，將傳統 DDPM 的 1000 步壓至現代主流的 15 ~ 28 步（甚至蒸餾到 1 ~ 4 步）。  
+Distillation:透過 LCM、SDXL Turbo、Lightning 或 Schnell 等技術，將原本需要數十步的 Teacher 模型壓縮為 1–4 步的 Student 模型，實現即時生成（Real-time inference）。  
+VAE:Latent Diffusion 的空間轉譯器。負責將高解析度像素空間壓縮至低維度 Latent 空間（例如 SD 1.5 進行 8x 下採樣轉為 4 通道），大幅降低運算成本。  
 
-
-
-
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)  
+從傳統 DDPM 繁瑣的隨機漫步加噪過程，到 Latent Diffusion（SD 系列）將運算搬到低維度潛在空間，再到現代 Flow Matching（如 SD3、Flux）利用最優運輸將生成路徑拉直，看到了生成式 AI 在「數學乾淨度」與「採樣效率」上的劇烈演進。   
+基礎架構（Backbone）全面由 U-Net 轉向 DiT (Diffusion Transformer)，並透過 adaLN-Zero 與 Spacetime Patch 成功解鎖了文字、圖像乃至影片（如 Sora）的大規模 Scaling。  
+傳統擴散模型的最大核心痛點在於「曲折的生成軌跡」與「高昂的 NFE 運算成本」。Flow Matching 透過向量場回歸將軌跡變成直線，是數學與工程上極其優雅的典範轉移（Paradigm Shift）。  
+現代生成模型的效能不再單純依賴單一演進，而是「模型架構（DiT） + 基礎數學（Flow Matching/EDM） + 高效採樣器（Euler/Distillation）」三者的強強結合。  
+(b)  
+傳統像素空間擴散與 U-Net 的運算天花板:若直接在高解析度像素空間進行擴散，運算量與 HBM 消耗呈爆炸性成長；而傳統 U-Net 骨幹在面對千億級或多模態大模型時，缺乏足夠優異的 Scaling Law（規模化效應），難以持續透過堆疊算力來突破畫質與語意理解的極限。  
+採樣步數過多導致的推論延遲:早期 DDPM/DDIM 動輒需要 50 到 1000 步的迭代（高 NFE），導致生成一張圖或一段影片需要耗費大量時間，難以滿足即時互動（Real-time Inference）的產業落地需求，逼得學術與工業界必須透過蒸餾或 Flow Matching 來強行「拉直軌跡、壓低步數」。  
 
 
 
