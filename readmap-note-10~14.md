@@ -209,6 +209,28 @@ VAE:Latent Diffusion 的空間轉譯器。負責將高解析度像素空間壓�
 
 
 
+## part13 PEFT & Fine-tuning
+## 名詞理解
+1.LoRA  
+大模型在進行下游任務微調（Fine-tuning）時，權重的變化量（ΔW = W' - W）雖然維度極高，但其實際表現出的「內稟秩（Intrinsic Rank）」非常低。  
+在訓練過程中，基礎模型權重 W 被全面凍結（Frozen），只更新 A 與 B 的參數。這讓可訓練參數量從數十億驟降至幾百萬，記憶體消耗大幅降低。  
+2.QLoRA核心技術   
+NF4(NormalFloat 4-bit Quantization):研究發現預訓練模型的權重（Weights）數值分佈通常近似於常態分佈（Normal Distribution）。  
+Double Quantization (雙重量化):量化時為了還原數值，會產生對應的縮放常數（Quantization Constants / Scales）。這些常數本身也佔用了不少記憶體。  
+Paged Optimizers (分頁優化器):在訓練過程中，處理長序列或突發資料時，Optimizer States（如 Adam 的動態矩陣）容易瞬間暴增導致 OOM（Out of Memory）。  
+3.DPO  
+SFT → DPO 標準組合:    
+SFT (Supervised Fine-Tuning)：先讓模型學會對話格式與基礎指令遵循。  
+DPO (Direct Preference Optimization)：透過偏好數據（優選答案 vs. 劣選答案），直接在數學 Loss 上優化模型偏好，省去了傳統 RLHF 中複雜且不穩定的獎勵模型（Reward Model）與 PPO 訓練，成為 2024 年後開源模型的標配對齊方案。  
+DPO 的四大主流演進變體:
+ORPO (Odds Ratio Preference Optimization - 聯合優化):打破傳統「先 SFT 再 DPO」的兩階段限制，將 SFT 的語言建模 Loss 與 Preference Loss 合二為一，在單一訓練階段同時完成指令微調與偏好對齊，節省一半的訓練時間與資源。  
+KTO (Kahneman-Tversky Optimization - 單標籤優化):傳統 DPO 必須依賴成對的資料（Pairwise: 哪個好、哪個不好）。KTO 借鑒行為經濟學理論，只需要單一的「好」或「壞」二元標籤即可訓練，大幅降低了高昂的人工偏好資料對齊成本。  
+SimPO (Simple Preference Optimization - 參考模型免除):傳統 DPO 訓練時需要同時載入一個龐大的 Reference Model 來計算基線機率，消耗大量 VRAM。SimPO 巧妙地直接利用生成回覆的平均對數機率（Average Log-probability）作為隱含獎勵，完全不需要 Reference Model，訓練更輕量且表現優異。  
+GRPO (Group Relative Policy Optimization - 群體相對策略優化):由 DeepSeek 團隊（如 DeepSeek-R1）大放異彩的強化學習對齊演算法。它捨棄了傳統 PPO 需要額外訓練一個巨大的 Critic 模型的作法，改為針對同一個 Prompt 同時生成一組（Group）多個輸出，透過群體內部的相對分數進行歸一化與優化，極大地降低了大模型 RL 階段的運算與記憶體瓶頸。  
+4.Data 準備  
+在大模型微調領域，「資料的品質與乾淨程度」往往比選擇哪一種微調演算法（LoRA vs. QLoRA）或超參數調整來得更具決定性。垃圾進，垃圾出（Garbage in, garbage out）。  
+SFT (Supervised Fine-Tuning) 資料準備:現代開源框架（如 LLaMA-Factory、Axolotl）普遍採用類似 OpenAI ChatML 的結構  
+Preference Data (偏好對齊資料) 準備:用於對齊（Alignment）階段的成對偏好資料，結構通常包含提示詞、勝出回答與落敗回答，確保 chosen 的回答品質、安全規範與格式遵循度明顯優於 rejected，才能讓模型學到正確的價值觀與偏好方向。  
 
 
 
