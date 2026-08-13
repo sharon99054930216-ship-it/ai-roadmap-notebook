@@ -231,6 +231,52 @@ GRPO (Group Relative Policy Optimization - 群體相對策略優化):由 DeepSee
 在大模型微調領域，「資料的品質與乾淨程度」往往比選擇哪一種微調演算法（LoRA vs. QLoRA）或超參數調整來得更具決定性。垃圾進，垃圾出（Garbage in, garbage out）。  
 SFT (Supervised Fine-Tuning) 資料準備:現代開源框架（如 LLaMA-Factory、Axolotl）普遍採用類似 OpenAI ChatML 的結構  
 Preference Data (偏好對齊資料) 準備:用於對齊（Alignment）階段的成對偏好資料，結構通常包含提示詞、勝出回答與落敗回答，確保 chosen 的回答品質、安全規範與格式遵循度明顯優於 rejected，才能讓模型學到正確的價值觀與偏好方向。  
+5.實戰流程  
+Step 1：挑選合適的基礎模型  
+針對不同的硬體與任務需求，現代主流的輕量到中型開源模型是入門首選，例如 Llama 3.2 3B（超輕量邊緣部署）、Qwen 2.5 7B（全能中文/程式碼能力極強）或 Gemma 3 4B。  
+Step 2：精心準備 SFT 資料 (Data Curation)  
+核心原則：「少而精（Quality > Quantity）」遠勝過盲目堆疊龐大但雜亂的資料。  
+規模：一般特定領域微調準備 1,000 到 10,000 筆高品質對話樣本即可見效。務必確保 JSON 格式正確並套用對應的 Chat Template。  
+Step 3：高效訓練架構 (Unsloth + QLoRA 組合拳)  
+工具配置：採用 Unsloth（大幅加速訓練並節省 VRAM 的開源加速庫）搭配 QLoRA。  
+參數建議：4-bit Base Model 載入（極度省顯存） + Rank 設為 r = 16，且 Target Modules 建議掛載在所有 Linear 層（全線性層 LoRA），以確保模型能夠學習到足夠的領域知識。  
+Step 4：客觀評估與驗證 (Evaluation)  
+作法：透過標準基準測試（如 MT-Bench）或自行建立的驗證集（Custom Eval Set）來檢驗微調後的模型是否產生「災難性遺忘（Catastrophic Forgetting）」或推理能力退化。  
+Step 5：偏好對齊與強化 (DPO Alignment)  
+作法：準備 100 到 5,000 筆偏好對齊資料（Chosen vs. Rejected Pairs），透過 DPO 階段進一步校正模型的語氣、安全性與指令遵循傾向，使其更符合人類使用習慣。  
+Step 6：合併與權重匯出 (Merge & Export)  
+作法：訓練完成後，將 LoRA 權重與 4-bit/BF16 Base Model 進行融合（Merge），並匯出成標準的 safetensors 格式（用於伺服器端部署如 vLLM）或 GGUF 格式（用於消費級電腦的 Llama.cpp / Ollama 本地端離線運行）。  
+6.PEFT  
+零推論延遲的關鍵 (Zero Inference Latency)  
+像 LoRA 與 DoRA 這類基於矩陣加法或權重合併架構的方法，在訓練完成後可以將更新量直接「融回（Merge）」原本的底座模型中，在推論時不會增加任何額外的計算負擔，這是它們能夠大規模落地工業界的最大原因。  
+精確度與成本的權衡 (DoRA vs. LoRA)  
+傳統 LoRA 假設權重更新的空間是均勻的，而 DoRA 透過數學上更符合神經元特性的「大小-方向分離」，在不增加太多訓練負擔的情況下，彌補了 LoRA 在某些複雜推理或微調任務上的表現上限。  
+7.Multi-LoRA Serving  
+傳統架構的痛點:若要同時為 1,000 個不同企業或客戶提供專屬微調模型（SaaS 模式），如果為每個客戶部署一個獨立的 Base Model，硬體成本（VRAM 與 GPU 數量）將呈天文數字成長，根本無法規模化。  
+Multi-LoRA Serving 的破局解法:  
+共用基底 + 輕量外掛：整個叢集只需要常駐 一個大型 Base Model（佔用大部分 VRAM），而每個客戶幾百 MB 的 LoRA 權重可以動態載入與卸載。  
+成本效益：硬體成本從「1,000 個完整大模型」驟降為「1 個 Base + 1,000 個輕量 Adapter（每個約 100MB）」，讓 AI SaaS 的商業模式得以真正落地。  
+核心工程挑戰與主流實現方案:  
+動態切換與異構批次處理的挑戰:在同一個 Batch 裡面的不同 Requests 可能需要呼叫不同的 LoRA 專屬權重（例如 Request A 要客服風格 LoRA、Request B 要法律合約 LoRA）。系統必須在矩陣乘法時即時切換或組合對應的 Δ W = BA，而不能中斷整個 GPU 管道。  
+S-LoRA:提出 Unified Paging（統一記憶體分頁） 與 Heterogeneous Batching（異構批次處理）。   
+vLLM LoRA Support (產線標配):每個 incoming request 帶有對應的 adapter_id，結合 PagedAttention 機制在記憶體中高效共用 KV Cache 同時動態套用對應的 LoRA 矩陣，兼具高吞吐與低延遲。  
+8.名詞表  
+Rank r (低秩矩陣秩數):LoRA 最核心的超參數。決定了 Δ W 的表達能力與參數量。實務上通常設在 8 ~ 64 之間（若採用全線性層掛載，較小的 r 即可；若只掛載注意力層，則可開高一點）。  
+NF4 (4-bit NormalFloat):QLoRA 專為大模型權重（近似常態分佈 $\mathcal{N}(0, 1)$）量身打造的最優 4-bit 資料型態，將傳統 INT4 量化的資訊損失降到最低。    
+Chat Template (對話模板與特殊標記):不同開源模型各自定義的特殊控制字符（如 <|im_start|>、[INST]、<start_of_turn>）。如果資料與模型的模板不匹配，輕則回答錯亂，重則導致模型崩潰或無限鬼打牆。  
+Reference Model (參考模型):在 DPO / PPO 等偏好對齊演算法中，用來限制新模型（Policy）不要偏離初始能力太遠的凍結基準模型。代價是會佔用大量 VRAM，因此催生出如 SimPO、ORPO 等免除 Reference Model 的變體。  
+Continued Pre-training (持續預訓練):有別於 SFT（教導對話格式與指令遵循），持續預訓練是餵給模型大量的領域內原生文字（Raw Text），同樣以 Next-token prediction 為目標，用來將全新領域的專業知識「刻」進模型底層，通常會接在 SFT 與 DPO 之前。  
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)  
+ 當模型規模突破數百億參數時，全量微調（Full Fine-Tuning）因需要存儲龐大的 Optimizer States 與梯度，導致 VRAM 需求呈爆炸性成長，單卡或小規模叢集根本無法負荷。  
+ 在工業界部署中，看到多租戶 AI SaaS 服務不再為每個客戶盲目複製獨立的大模型，而是透過「一個 Base Model + 上百個輕量 LoRA Adapter」的動態切換架構，徹底顛覆了硬體成本結構。  
+ 參數高效微調的本質是利用權重更新的低秩內稟特性（Low-Rank Intrinsic Dimension）；而資料的品質與 Chat Template 的正確性（如避免特殊字符錯置），往往比選擇哪種微調演算法更能決定模型成敗。  
+(b) 
+全量微調（Full Fine-Tuning）的記憶體災難:在傳統全量微調中，模型每一個參數都需要參與梯度更新並保存動態優化器狀態。面對數十億到數千億參數的大模型，這對硬體算力的要求極高，將多數中小企業與研究團隊徹底阻絕在外。  
+多租戶 SaaS 部署的硬體成本困境:若採用傳統架構為成百上千個不同的企業客戶提供專屬微調模型，必須為每個客戶常駐一個完整的大模型個體，導致 VRAM 資源嚴重浪費，商業模式無法規模化。  
+傳統對齊技術的繁瑣與不穩定:傳統 RLHF 流程必須先訓練一個複雜的獎勵模型（Reward Model），再透過強化學習（PPO）進行策略優化。這套流程涉及多個模型的同時加載與不穩定訓練，極易發生梯度崩潰，促使學術與工業界轉向更乾淨的直接偏好優化（如 DPO）。  
+
 
 
 
