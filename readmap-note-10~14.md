@@ -272,14 +272,39 @@ Continued Pre-training (持續預訓練):有別於 SFT（教導對話格式與�
  當模型規模突破數百億參數時，全量微調（Full Fine-Tuning）因需要存儲龐大的 Optimizer States 與梯度，導致 VRAM 需求呈爆炸性成長，單卡或小規模叢集根本無法負荷。  
  在工業界部署中，看到多租戶 AI SaaS 服務不再為每個客戶盲目複製獨立的大模型，而是透過「一個 Base Model + 上百個輕量 LoRA Adapter」的動態切換架構，徹底顛覆了硬體成本結構。  
  參數高效微調的本質是利用權重更新的低秩內稟特性（Low-Rank Intrinsic Dimension）；而資料的品質與 Chat Template 的正確性（如避免特殊字符錯置），往往比選擇哪種微調演算法更能決定模型成敗。  
-(b) 
+(b)  
 全量微調（Full Fine-Tuning）的記憶體災難:在傳統全量微調中，模型每一個參數都需要參與梯度更新並保存動態優化器狀態。面對數十億到數千億參數的大模型，這對硬體算力的要求極高，將多數中小企業與研究團隊徹底阻絕在外。  
 多租戶 SaaS 部署的硬體成本困境:若採用傳統架構為成百上千個不同的企業客戶提供專屬微調模型，必須為每個客戶常駐一個完整的大模型個體，導致 VRAM 資源嚴重浪費，商業模式無法規模化。  
 傳統對齊技術的繁瑣與不穩定:傳統 RLHF 流程必須先訓練一個複雜的獎勵模型（Reward Model），再透過強化學習（PPO）進行策略優化。這套流程涉及多個模型的同時加載與不穩定訓練，極易發生梯度崩潰，促使學術與工業界轉向更乾淨的直接偏好優化（如 DPO）。  
 
-
-
-
+## part14 RAG & Prompt Engineering
+## 名詞理解
+1.RAG  
+Chunking (切塊策略):將長篇文件切割成適當大小的片段（通常建議 Chunk Size: 512–1024 tokens，並設定 Overlap: 64 tokens 以防上下文語意在切口處斷開）。  
+Embedding (向量化模型):將文字轉為高維度稠密向量（Dense Vectors）。主流開源與商用選擇包括 BGE、E5、OpenAI text-embedding-3、Voyage AI 與 Cohere Embed v3。    
+Vector Database (向量資料庫):用於高效儲存與向量檢索（Approximate Nearest Neighbor, ANN）。主流工具包含 Qdrant、Weaviate、pgvector（PostgreSQL 擴充）、Pinecone 與 LanceDB。  
+Query Processing & Hybrid Search (混合檢索):使用者輸入 Query 後先進行 Embedding 向量檢索（擅長語意理解），同時結合傳統關鍵字搜尋 BM25（擅長精確專有名詞、代號、人名）。  
+Reranking (重排機制 - 效能分水嶺):初步檢索撈出較多候選（如 Top 50），再透過精準度極高的 Cross-Encoder（如 bge-reranker、Cohere Rerank）進行運算成本較高但極度精細的 Query-Document 交互比對。  
+Context Stuffing (上下文組裝):將經過重排篩選出的 Top-N 高品質文檔片段（Context）與使用者的原始問題依照特定 Prompt Template 組合後，塞入 LLM 的 Context Window 中。    2.Embedding 模型  
+2024+ 開源向量模型 SOTA (State-of-the-Art):  
+BGE-M3 (FlagEmbedding)：支援多語言、多功能（Dense + Sparse + Multi-Vector），是當前企業級 RAG 的多功能標配。  
+E5-Mistral / gte-Qwen：基於 LLM 架構（如 Mistral / Qwen）微調而成的 Embedding 模型，擁有極強的語意理解能力與超長 Context 支援。  
+jina-embeddings-v3 / Stella：在特定任務表現優異，且支援先進的動態維度調整。  
+現代 Embedding 的三大殺手級特性:    
+多語言支援 (Multilingual)：原生支援跨語言檢索（如用中文 Query 撈出英文文件）。  
+長上下文支援 (Long Context)：支援數千甚至 8k+ tokens 的輸入，適合直接將整篇論文或長報告轉成向量。  
+馬特廖什卡表示學習 (Matryoshka Representation Learning, MRL)：允許在不重新訓練的情況下，動態截斷向量維度（例如將 1536 維壓到 512 維或 256 維）。能夠在幾乎不損失檢索準確率的前提下，大幅節省向量資料庫的儲存空間與計算開銷。  
+3.Chunking-被低估    
+傳統切塊  
+Fixed Token Chunking (固定 Token 切割):設定固定大小（例如 512 tokens）與重疊（Overlap），不管三七二十一直接硬切。  
+Sentence / Paragraph Boundary (基於語句與段落邊界):透過語言工具（如 spaCy、NLTK）識別自然語言的句點、換行與段落邊界進行切分。  
+現代進階切塊  
+Semantic Chunking (語意切塊):計算相鄰句子之間的 Embedding 語意相似度。當連續句子之間的相似度突然驟降（代表主題轉折、進入新段落），系統便自動在此處設為斷點。  
+Hierarchical Chunking / Parent-Child Chunking (階層式切塊):將文件切成大範圍的 Parent Chunk（例如整段文章）與細粒度的 Child Chunk（例如句子或小段落）。  
+異質資料的專門切法  
+Code (程式碼):不能用 Token 亂切，必須依賴 AST (Abstract Syntax Tree) 或函式/類別（Function/Class）邊界進行語法級別的切塊，否則函數被卡斷會失去程式邏輯。  
+Tables (表格):表格若被隨意切碎會變成無意義的字串。通常需轉換為 Markdown 格式或 HTML 結構，並將表頭（Header）與對應數值綁定在同一個 Chunk 中。  
+PDFs (排版複雜文檔):傳統 PDF 解析容易把雙欄、頁首、頁尾、圖表文字混在一起。現代 RAG 強調 Layout-aware parsing（如使用 Marker、MinerU 工具），先辨識版面結構後再進行邏輯切塊。  
 
 
 
