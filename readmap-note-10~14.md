@@ -305,6 +305,50 @@ Hierarchical Chunking / Parent-Child Chunking (階層式切塊):將文件切成�
 Code (程式碼):不能用 Token 亂切，必須依賴 AST (Abstract Syntax Tree) 或函式/類別（Function/Class）邊界進行語法級別的切塊，否則函數被卡斷會失去程式邏輯。  
 Tables (表格):表格若被隨意切碎會變成無意義的字串。通常需轉換為 Markdown 格式或 HTML 結構，並將表頭（Header）與對應數值綁定在同一個 Chunk 中。  
 PDFs (排版複雜文檔):傳統 PDF 解析容易把雙欄、頁首、頁尾、圖表文字混在一起。現代 RAG 強調 Layout-aware parsing（如使用 Marker、MinerU 工具），先辨識版面結構後再進行邏輯切塊。  
+4.Prompt  
+CoT (Chain of Thought - 思維鏈):強制模型將複雜問題拆解為多個步驟逐一推導，大幅提升數學、邏輯與程式碼編寫的正確率。  
+Few-shot Prompting (少樣本提示):挑選示範時，樣本必須具備多樣性（Diverse），並刻意涵蓋各種邊界條件（Edge Cases），引導模型模仿正確的輸出邏輯與格式。  
+Structured Output (結構化輸出強制):純文字的 LLM 回覆很難讓後端程式直接解析。解法：結合 JSON Schema 或底層語法約束解碼技術（Grammar-constrained decoding，如 Outlines、Instructor），在 Token 生成階段直接限制模型只能吐出符合特定格式的 JSON，徹底告別字串解析崩潰。  
+Self-consistency (自我一致性):針對同一個複雜問題，讓 LLM 獨立採樣生成 $N$ 個不同的推理路徑與答案（Temperature > 0），最後透過多數決（Majority Vote）選出最穩健的最終答案。  
+Reflexion / Self-Critique (反思與自我審查):多輪對話或 Agent 架構的經典延伸。讓模型在第一輪生成答案後，啟動第二輪的「自我檢查與批判」，針對潛在漏洞進行修正與優化，顯著降低低級錯誤率。  
+5.進階 RAG  
+HyDE (Hypothetical Document Embeddings - 假想文件嵌入):先讓 LLM 針對 Query 憑空寫出一段「虛構的理想答案」，再將這段假答案轉成 Embedding 去向量資料庫進行檢索。  
+Multi-Hop Retrieval (多跳檢索):將主 Query 自動分解成多個子問題（Sub-queries），進行依序或疊代的多次檢索，逐步拼湊出完整答案。  
+Agentic RAG (智慧體 RAG):模型可以自己決定「何時該發動檢索」、「要用什麼關鍵字搜」、「檢索出來的結果不夠好時是否要進行二次改寫或自我修正（Self-Correction）」。  
+GraphRAG (Microsoft 知識圖譜檢索):透過 LLM 將文檔中的實體（Entities）與關係（Relations）萃取出來建構知識圖譜，並透過社區發現演算法（Community Detection）進行分層摘要。  
+Late Chunking (延遲切塊):顛覆傳統「先切塊、再各自 Embedding」的順序。改為先將整篇長文件送入支援長上下文的 Embedding 模型中進行編碼，保留全篇的交叉上下文（Cross-chunk context）特徵後，才在最後階段進行切塊。  
+6.Eval RAG  
+Retrieval Evaluation (檢索端評估指標)  
+Recall@k (召回率):在前 k 個檢索結果中，是否包含包含正確答案（Ground Truth）的文件。  
+MRR (Mean Reciprocal Rank - 平均倒數排名):正確文件在檢索結果中排在第幾位。如果第一名就是正確答案，分數為 1；若排在第二名，分數為 0.5。排名越前面，MRR 越高。  
+nDCG (Normalized Discounted Cumulative Gain - 正規化折讓累積增益):不僅考慮「有沒有找到」，還考慮「相關性排序的優劣」（排在最前面的文檔權重最高），是評估檢索品質非常嚴謹的綜合指標。  
+Generation Evaluation (生成端評估指標)  
+Faithfulness (忠實度 / 幻覺指標):生成的答案中，有多少成分是直接基於檢索到的 Context？如果模型自己瞎掰、加入外部沒有的事實，Faithfulness 分數就會暴跌。  
+Answer Relevance (答案相關性):生成的回答是否有切中使用者一開始的提問（Query）？有沒有答非所問或離題。  
+End-to-End Evaluation (端到端綜合評估)  
+Human Eval (人工評估):由領域專家對最終生成的完整回答進行主觀打分（流暢度、準確度、實用性）。雖然是評估的黃金標準（Gold Standard），但成本極高、無法自動化。  
+LLM-as-a-Judge (大模型當裁判):使用能力最強的旗艦模型（如 GPT-4 或 Claude 3.5 Sonnet）擔任裁判，依照預設的 Prompt rubric 對系統輸出的答案進行自動化打分與理由解析，兼具高效率與與人類高度一致的評分表現。  
+7.名詞表  
+Dense Retrieval (稠密向量檢索):將 Query 與 Doc 透過 Embedding 模型轉為向量並計算餘弦相似度。  
+BM25:對精確匹配 (Exact Match)、罕見詞、人名、產品編號極其強大，是現代檢索不可或缺的基石。  
+Cross-Encoder Rerank (交叉編碼重排):精準度遠高於雙編碼器（Bi-encoder），但計算成本高，通常只用在初篩後的 Top-50 候選精修。  
+HyDE (Hypothetical Document Embedding):先用 LLM 針對 Query 生成一份「假答案」，再將假答案去進行向量檢索。  
+Recall@k (召回率):衡量檢索端表現的主指標 — 正確的標準答案文檔出現在前 k 個檢索結果中的比例。  
+Faithfulness (忠實度):生成端（Generation）的核心指標 — 確保模型產出的回答是否有明確的檢索來源（Source）支撐，用以防範幻覺。   
+Reflexion (自我反思):讓 LLM 自我檢視生成結果、尋找錯誤並進行修正的機制，對複雜推理與高難度任務特別有效。  
+
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)  
+從最初簡單的「切塊 → 向量化 → 塞進 Prompt」的 Naive RAG，演進到現代融合了混合檢索（BM25 + Dense）、RRF 融合排序、Cross-Encoder 重排（Reranker）、HyDE 假想嵌入、甚至結合知識圖譜的 GraphRAG 與 Agentic RAG。    
+提示詞工程從早期的「隨性描述」走向科學化的結構設計（如 CoT 思維鏈、JSON 格式強制約束、Self-consistency 等）。  
+純靠向量檢索（Dense Retrieval）在面對精確名詞或編號時容易翻車，必須搭配傳統的 BM25 進行混合檢索（Hybrid Search），並透過高效的 Cross-Encoder Reranker 進行精準過濾，才是當前工業界最穩健的黃金標準。  
+(b)  
+傳統向量檢索的盲點與語意落差:純粹的 Dense Retrieval 依賴語意相似度，但在面對企業內部的專有名詞、產品編號、零件代號或特定人名時表現極差，常發生「有資料卻搜不到」的狀況。  
+傳統 Chunking 的語意破碎化:固定長度的切塊常常把一句話或核心邏輯硬生生從中間切斷，導致 Embedding 抓不到完整上下文，直接汙染後續的向量資料庫品質。  
+宏觀全域問題的失靈 (Local vs. Global Search):傳統向量 RAG 擅長尋找「局部具體事實」，但面對「總結過去一年所有研發專案的整體趨勢」這類宏觀、跨文件的全域性提問時，傳統 Chunk 檢索會完全失效，這也是逼迫技術轉向 GraphRAG 的核心原因。  
+
+
 
 
 
