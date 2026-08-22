@@ -144,3 +144,80 @@ Sim-to-real (虛實轉移):在世界模型內訓練出來的決策策略（Polic
 (b)  
 像素級生成的算力浪費與物理幻覺:以擴散模型為主體的像素級視訊生成器，花費了巨大的算力在渲染高頻雜訊與無關緊要的細節（如背景樹葉晃動），導致模型容易忽視底層物理邏輯，隨著時間拉長迅速出現穿模、物體扭曲或質量不守恒的現象。  
 長時序一致性崩潰與虛實落差:現有世界模型在處理長達幾十秒或幾分鐘的連續動態時，場景與物體極易發生漂移。而在虛擬想像中訓練出來的策略（Policy），一旦直接放到真實世界的物理環境中，往往因為微小的環境誤差而導致決策徹底失效。  
+
+## part17 Audio · Speech · Music
+## 名詞理解
+1.Neural codec  
+就像文字處理需要透過 Tokenizer（如 BPE）將文字轉成 ID 一樣，Neural Codec 是現代 Audio LLMs（語音大語言模型）的基石。它能夠將高頻的連續音訊波形無失真地壓縮並轉化為離散的 Token 序列，讓 Transformer 模型可以直接進行預測與生成。  
+業界代表性模型:
+SoundStream (Google)：開創性的端到端神經音訊編解碼器，奠定了現代 RVQ 架構的基礎。  
+EnCodec (Meta)：開源界極具代表性、廣泛應用於多模態語音與音樂生成系統的高效編解碼器。  
+DAC (Descript Audio Codec)：以高保真音質著稱，能極佳地還原音樂細節與人聲情感。  
+核心技術架構:  
+Encoder (編碼器)採用卷積神經網路（Convolutional Neural Network）架構，將高採樣率（如 24kHz / 48kHz）的原始連續音訊進行下採樣，壓榨成密集的特徵表示。
+RVQ (Residual Vector Quantization - 殘差向量量化)  核心的多層 Codebook（碼本）機制。透過層層遞進的殘差量化，將連續特徵對應到離散的代碼本中。最終將音訊壓縮至每秒約 75–150 個 Token (~75-150 tokens/sec) 的理想資訊密度。  
+Decoder (解碼器)對應的逆向網路結構（Transposed Convolutions），負責接收 Token 序列並將其精準還原為高品質的真實音訊波形。  
+2.Whisper  
+Encoder-Decoder Transformer 架構  
+輸入端：將原始音訊轉換為對數梅爾頻譜圖 (Log-Mel Spectrogram)。  
+輸出端：透過神經網路編碼器處理後，由解碼器以自迴歸（Autoregressive）方式直接輸出文字 Token。  
+海量弱監督預訓練:突破傳統語音辨識高度依賴人工精標資料的限制，使用高達 68,000 小時的網羅多語言、多口音、帶背景雜訊的混合資料進行預訓練，賦予模型極強的現實環境穩健性  
+效能優化與開源衍生變體:  
+Whisper-Turbo:透過將解碼器層數進行裁剪與微調（將解碼層從 32 層減至 4 層），在幾乎不失精準度（微幅 WER 差異）的前提下，實現高達約 4 倍至 8 倍的速度提升，成為即時語音辨識與批次處理的熱門選擇。  
+Distil-Whisper:透過知識蒸餾（Knowledge Distillation）技術瘦身模型，大幅降低參數量與運算成本，同時保持優異的辨識率。  
+Faster-Whisper:使用高效的 C++ 引擎（CTranslate2）進行底層重構與權重量化（Quantization），在 CPU 及 GPU 上展現出極致的推演速度與極低的記憶體佔用，是落地部署的工業界標配。  
+3.TTS  
+VALL-E:結合 Neural Audio Codec 將音訊轉為離散 Token，透過大型 Transformer 學習根據文字與短短幾秒的參考聲音去預測後續的聲音 Token，正式開啟 Zero-shot 語音複製的新紀元。  
+XTTS-v2:開源界極具代表性的輕量化多語言超擬真 TTS 引擎。    
+F5-TTS / E2 TTS:捨棄了傳統自迴歸（Autoregressive）模型容易產生的累積誤差與高延遲，全面改用 Flow Matching（流匹配） 擴散生成技術。  
+StyleTTS2 / OpenVoice / GPT-SoVITS:  
+StyleTTS2：以極高擬真度與風格控制（Style Transfer）著稱，接近人類播報員級別的表現。  
+OpenVoice：強調能夠細膩控制語音的特定情感、重音與精準的零樣本音色複製。  
+GPT-SoVITS：在中文與動漫/二創社群爆紅的整合型開源工具，具備極低的訓練門檻與極佳的長文本朗讀穩定度。  
+4.Speech-to-speech 與 GPT-4o  
+傳統管道  
+流程：  
+麥克風收音 → ASR (語音轉文字) → LLM (文字推理) → TTS (文字轉語音)  
+痛點：  
+極高延遲：多段模型串接導致牆鐘延遲通常高達 1 ~ 2 秒，對話節奏卡頓。  
+資訊遺失：在轉成文字的過程中，說話者的笑聲、嘆氣、語調起伏、重音與情感等「副語言資訊（Paralinguistic cues）」全部被過濾掉。  
+原生多模態語音模型 (Native Multimodal Audio Models):  
+代表：GPT-4o Voice、Gemini Live / Advanced。  
+運作機制：模型直接以原生的 Audio Tokens 進行雙向輸入與輸出，大腦在同一個統一的 Transformer 內同時處理文字與聲音。  
+重大突破：延遲大幅縮減至 ~ 320ms 級別，實現真正的即時打斷與全雙工（Full-duplex）對話，且能精準感知與表達呼吸聲、笑聲、語速快慢與情緒起伏。  
+開源界的對抗勢力:  
+Moshi (Kyutai 2024):由法國 AI 研究機構 Kyutai 推出的開源即時語音對話模型，主打超低延遲與強大的雙向全雙工語音互動能力。  
+Mini-Omni:輕量級開源的 Speech-to-Speech 實作方案，探索無須透過繁複串接即可直接輸出語音 Token 的架構。  
+GLM-4-Voice:智譜 AI 推出的原生語音大模型，支援流式的語音端到端對話處理，推動開源中文語音全雙工的發展。  
+5.Music  
+MusicGen (Meta):基於文字提示詞（Text-to-Music），結合神經音訊編解碼器（Neural Codec Tokenizer）將文字直接轉換為音訊 Token 序列進行自迴歸生成，對旋律與樂器的控制力極佳。  
+Stable Audio (Stability AI):採用潛在空間擴散模型 (Latent Diffusion) 架構，擅長生成高保真的時序音樂剪輯、環境音效與特定長度的音軌。  
+Suno / Udio:商業閉源巨頭。能夠生成包含完整結構（前奏、主歌、副歌、間奏）與高擬真擬人化人聲（Vocals）的完整流行曲目，開啟了大眾化 AI 詞曲創作的時代。  
+2024–2026 年核心爭議：版權與訓練資料合法性  
+RIAA 訴訟與版權風暴:美國唱片業協會（RIAA）代表大型唱片公司（如 Universal, Sony, Warner）對 Suno 與 Udio 提起大規模版權侵權訴訟，核心爭議在於未經授權使用版權音樂作為 AI 模型訓練集（Training Data）。  
+從對抗走向授權合作的產業轉折:經歷激烈的法律攻防後，部分平台（如 Udio 與 Universal/Warner、Suno 與 Warner）逐步轉向與大型唱片公司達成商業授權與合作協議（推動藝人參與、權利分潤及合法版權模型），標誌著 AI 音樂正朝向合規化與版權清晰化的方向演進。  
+6.名詞表  
+Mel Spectrogram (梅爾頻譜圖):將聲音以「頻率 × 時間」的 2D 視覺化圖形表示，模擬人類聽覺對頻率的非線性感知，是如 Whisper 等傳統音訊 Encoder 的標準輸入格式。  
+RVQ (Residual Vector Quantization - 殘差向量量化):EnCodec、DAC 等神經編碼器的核心機制。透過多層 Codebook 層層遞進量化殘差，將連續音訊壓縮成離散特徵。  
+Codec Token (編碼器標記):經由 RVQ 轉換出來的離散整數代碼。每秒約數十到數百個 Token，讓 Transformer 能夠像處理文字一樣直接進行預測與生成。  
+VAD (Voice Activity Detection - 語音活動檢測):用於即時判斷「誰在說話、何時開始、何時結束（靜默）」的技術，是即時語音對話 Agent 實現自然打斷與輪流發言的必備組件。  
+WER (Word Error Rate - 字詞錯誤率):衡量 ASR 辨識準確度的主要指標（計算插入、刪除、替換錯誤）；中文環境則常使用 CER（字元錯誤率）。  
+Zero-shot Voice Clone (零樣本語音複製):自 VALL-E 開啟的新時代。只需提供 1–5 秒的參考音檔就能精準複刻聲線，但同時帶來極高的 Deepfake 與合規倫理風險。  
+Inner Monologue (內心獨白 - Moshi 獨創設計):以法國 Kyutai 的 Moshi 為代表。模型在輸出語音 Token 之前，會先生成時間對齊的文字 Token 作為規劃前綴，大幅提升語言邏輯與事實正確性，同時具備同步 ASR 與 TTS 能力。  
+
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)  
+ 聽覺人工智慧正在經歷劇烈的典範轉移。從過去笨重、多段串接的傳統管線（ASR → LLM → TTS），迅速演進到以 Neural Audio Codec 為基石、原生端到端（Native Multimodal Audio）處理全雙工語音的全新時代。  
+ 同時，音樂生成與超擬真語音複製（Zero-shot TTS）在開源與商業雙軌並進下爆發，諸如 Flow Matching 擴散生成與創新的「內心獨白（Inner Monologue）」架構，徹底改變了人機互動的自然度。  
+ 「語音不只是文字的聲音載體，更是包含無數副語言資訊（Paralinguistic Cues）的高維資料」。傳統串接式架構在將聲音轉成文字時，會粗暴抹除笑聲、停頓、語調與情感起伏；唯有透過原生音訊 Token 的統一建模，才能真正賦予機器人或語音助手類人的對話節奏與情感共鳴。  
+(b)  
+傳統串接式架構的延遲與資訊斷層:傳統 ASR → LLM → TTS 的串接方式，不僅累積了高達 1 到 2 秒的牆鐘延遲，更致命的是在第一步轉文字時，說話者的語調、情緒、重音與呼吸聲等副語言資訊被永久丟失，導致生成出的語音冰冷且缺乏互動感。  
+自迴歸語音模型的累積誤差與運算瓶頸:早期基於 Transformer 的自迴歸語音生成模型在處理長序列音訊時，容易發生後半段崩潰、發音模糊或嚴重延遲（Time-to-First-Audio 過長）的問題，且對算力的消耗極大。  
+版權合法性與訓練資料黑箱爭議:現代高保真音樂生成模型（如 Suno、Udio）雖能產出媲美專業母帶的商業級曲目，但由於其訓練過程大量攝取版權音樂，引發了強烈的法律訴訟與創作者權益爭議，成為技術商業化的一大隱患。  
+
+
+
+
+
+
