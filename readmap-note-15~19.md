@@ -216,7 +216,36 @@ Inner Monologue (內心獨白 - Moshi 獨創設計):以法國 Kyutai 的 Moshi �
 自迴歸語音模型的累積誤差與運算瓶頸:早期基於 Transformer 的自迴歸語音生成模型在處理長序列音訊時，容易發生後半段崩潰、發音模糊或嚴重延遲（Time-to-First-Audio 過長）的問題，且對算力的消耗極大。  
 版權合法性與訓練資料黑箱爭議:現代高保真音樂生成模型（如 Suno、Udio）雖能產出媲美專業母帶的商業級曲目，但由於其訓練過程大量攝取版權音樂，引發了強烈的法律訴訟與創作者權益爭議，成為技術商業化的一大隱患。  
 
-
+## part18 Code LLMs & Agents
+## 名詞理解
+1.訓練  
+Code-heavy pretraining (海量程式碼預訓練):使用大量的 GitHub 開源程式碼（限於 Permissive 授權條款，如 MIT、Apache 2.0 等）並經過嚴格清洗、過濾垃圾代碼與去重，建立強大的程式碼基底語料庫。  
+FIM objective (Fill-in-the-Middle - 夾擠填充訓練):打破傳統單向的 Next-token prediction，讓模型學習「根據前文與後文，來補全中間缺漏的程式碼片段」。這是現代 AI 程式編輯器（如 Cursor、Copilot）進行游標處即時自動完成（Inline Completion）的核心技術基石。  
+Repo-level packing (全庫檔案拼裝):將同一個 Repository（程式碼庫）中具備引用關係的多個檔案進行智慧化拼接與打包（Packing），讓模型在預訓練階段就能夠理解跨檔案、跨模組之間的函數調用與依賴關係。  
+Long-context (超長上下文支援):支援 256k 到 1M} Tokens 的超長上下文視窗，讓工程師可以直接把整個專案的原始碼塞進 Prompt 裡，告別傳統靠 RAG 檢索經常漏掉關鍵上下文的痛點。  
+Execution feedback / RLEF (依執行回饋進行強化學習):跳脫純文字的偏好對齊，直接讓模型產出程式碼並丟進沙盒環境中實際跑單元測試（Unit Tests）。  
+2.Coding agent  
+核心工具集的分類與分工  
+讀取類 (Read):  
+read_file：精準讀取特定檔案內容（支援指定行數區間，避免吃掉過多 Context）。  
+list_files / glob：探索專案目錄結構，掌握專案佈局。  
+grep / ripgrep：全庫關鍵字、正規表達式或符號搜尋，用於快速定位函數與變數定義。  
+修改類 (Modify):  
+str_replace / edit_file：區塊式的精準替換。  
+write_file：整檔覆寫（通常用於全新檔案建立）。  
+執行類 (Bash):  
+bash：執行終端機指令（跑單元測試、編譯 build、執行 linter、檢查 git 狀態）。  
+版本控制 (Git):  
+git (diff / status / log / commit)：檢視變更痕跡、還原錯誤、提交變更。  
+三大關鍵產品工程決策  
+程式碼修改機制：
+程式碼修改機制:要求模型給出 <<<<<<< SEARCH 與 ======= 及 >>>>>>> REPLACE 的夾擠區塊。  
+Unified Diff / Patch:要求模型輸出標準的 Git diff 格式來套用修改。  
+錯誤回饋循環:  
+把終端機當成天然的 Compiler / Linter Feedback:當 Agent 透過 bash 執行測試失敗（Test Failure）或編譯報錯（Stderr）時，這些錯誤訊息不會被隱藏，而是完整且原封不動地餵回給 Agent 的 Context。自主閉環：Agent 根據錯誤堆疊追蹤（Stack trace）自動發動下一次的 grep → read_file → str_replace 循環，形成極具韌性的 Self-debugging 迴圈。  
+上下文管理與過載防禦:  
+超長輸出截斷:當 grep 或 bash 吐出超過數萬個字元的巨量輸出時（例如印出整個測試報告或大檔案），系統會在底層自動截斷或寫入暫存檔，僅回傳預覽路徑給模型，避免 Context 瞬間被垃圾資訊淹沒。  
+交替邊界與動態壓縮:隨著 Agent 執行輪數（Turns）增加，Trajectory 會快速膨脹。系統會定期觸發總結機制，將早期的對話與工具調用歷史進行摘要壓縮（保留關鍵決策與目前狀態），確保模型在長迴圈（Long-horizon）任務中不會注意力渙散或遭遇 Token 溢出。  
 
 
 
