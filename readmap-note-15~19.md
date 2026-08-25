@@ -246,7 +246,50 @@ Unified Diff / Patch:要求模型輸出標準的 Git diff 格式來套用修改�
 上下文管理與過載防禦:  
 超長輸出截斷:當 grep 或 bash 吐出超過數萬個字元的巨量輸出時（例如印出整個測試報告或大檔案），系統會在底層自動截斷或寫入暫存檔，僅回傳預覽路徑給模型，避免 Context 瞬間被垃圾資訊淹沒。  
 交替邊界與動態壓縮:隨著 Agent 執行輪數（Turns）增加，Trajectory 會快速膨脹。系統會定期觸發總結機制，將早期的對話與工具調用歷史進行摘要壓縮（保留關鍵決策與目前狀態），確保模型在長迴圈（Long-horizon）任務中不會注意力渙散或遭遇 Token 溢出。  
+3.Eval 全景  
+HumanEval / MBPP:傳統的函數級別（Function-level）程式碼生成基準。  
+LiveCodeBench:定期自動爬取各大程式競賽平台（如 LeetCode、AtCoder）的最新題目進行更新。  
+SWE-bench Verified:從真實 GitHub 專案中挑選出包含真實 Issue 與對應 Patch 的測試集（精選 500 例嚴格驗證版）。  
+SWE-bench Multimodal:延伸自 SWE-bench，專門針對包含網頁 UI 截圖的視覺與前端 Bug 修復任務。  
+Aider polyglot:由知名 AI 程式工具 Aider 推出的多語言（支援 6 種主流程式語言）程式碼編輯與重構評估基準。  
+Terminal-Bench:聚焦於完整的 Shell 終端機工作流程。  
+RepoBench:針對大型專案的全庫級別（Repo-level）程式碼理解與補全基準。  
+Spider 2.0:針對複雜資料庫管理與 SQL 查詢的真實世界 Agent 評估基準。  
+4.pattern  
+代表工具：Cursor Tab、GitHub Copilot  
+核心特徵:  
+超低延遲 (Ultra-low Latency)：必須在毫秒級內響應，隨時預測開發者接下來要打的程式碼。  
+技術基底：高度依賴 FIM (Fill-in-the-Middle) 訓練目標，根據游標的前後文進行精準的片段補全。  
+代表工具：Cursor Chat、Cline (前身 Claude Dev)  
+核心特徵：  
+全庫 RAG 檢索 (Retrieval-Augmented Generation)：將整個 Codebase 進行向量化或符號索引（AST/Symbol Indexing）。  
+互動場景：開發者可以直接提問：「這個專案的認證邏輯在哪裡？」或「幫我解釋這個模組的資料流」，由 LLM 結合專案上下文進行精準回答。  
+代表工具：Claude Code、Devin   
+核心特徵：  
+規劃與執行 (Plan & Exec)：跳脫單純的問答，Agent 能夠主動拆解任務、跨多個檔案進行編輯、呼叫終端機跑編譯與測試，並根據錯誤訊息進行自我修正（Self-correction）。  
+互動場景：開發者給定一個具體的功能需求或 Bug，Agent 自主完成程式碼修改與驗證。  
+代表工具：Devin、OpenHands (前身 OpenDevin)  
+核心特徵：  
+端到端工程交付 (End-to-End Delivery)：從接收自然語言任務描述開始，一路經歷環境設定、程式碼編寫、測試驗證、Git 提交，直到自主開啟並完善 Pull Request (PR)。  
+檢驗重點：代表當前 AI 軟體工程自動化的最高自主級別。  
+5.名詞表  
+FIM (Fill-in-the-Middle - 夾擠填充):將文件拆成 Prefix / Middle / Suffix 並重新排列進行預訓練，讓模型學會「根據前後文補中間」，是所有 IDE 即時程式碼補全（Inline Completion，如 Cursor Tab）的技術根基。  
+Repo-level context (跨檔依賴上下文):將同一個 Repository 中的多個檔案進行智慧化拼接與打包進行訓練，使模型能夠理解 import 與模組間的跨檔案依賴關係。  
+RLEF (Reinforcement Learning from Execution Feedback - 執行回饋強化學習):讓模型產出程式碼後直接丟進沙盒跑測試、Linter 或 Build，以測試通過率（Pass/Fail）作為 Reward。相比傳統 RLHF 更具客觀性與工程指導價值。  
+SWE-bench (真實 GitHub Issue 評估基準):包含 2,294 題（Verified 子集為精選 500 題）的真實軟體工程基準，要求 Agent 從真實 GitHub 專案中定位並修復 Issue，是目前各大 Frontier Coding 模型的頂級競技舞台。  
+ACI (Agent-Computer Interface - 智慧體電腦介面):由 SWE-agent 提出，專門為 LLM 設計的精簡工具操作介面（如 read_file、edit、bash），旨在降低複雜度、節省 Token 並減少模型的犯錯率。  
+Diff edit vs. SR edit (程式碼編輯形式):Agent 修改程式碼的兩種主流策略。Aider 採用標準的 Unified Diff，而 Claude Code 採用 Search-and-Replace（搜尋與替換），兩者各自有不同的錯誤模式與容錯特性。  
+Self-debug (自我除錯與迴圈修復):Agent 透過 bash 執行測試並讀取 Error Trace，自動改寫程式碼直到測試通過的閉環能力。這是支撐 SWE-bench 取得高分（超過 70% 關鍵能力）的核心機制。  
 
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)  
+AI 程式編寫工具正經歷從「被動的程式碼補全（Inline Autocomplete）」與「側邊欄問答」到「自主軟體工程代理（Autonomous Coding Agents，如 Claude Code、Cursor、Devin）」的劇烈典範轉移。AI 不再只是給建議，而是直接升級為能夠自主閱讀整個 Repository、跨檔案修改、執行終端機指令、跑測試並提交 PR 的工程同事。   
+「軟體工程的關鍵不在於寫出演算法，而在於全庫級的上下文理解與精準的 ACI（Agent-Computer Interface）工程設計」。一個優秀的 Coding Agent 之所以強大，往往不是因為模型本身有多聰明，而是因為它具備將編譯器、Linter 與測試錯誤即時回饋並進行自我除錯（Self-debug）的強健閉環。  
+(b)  
+上下文超載與長迴圈注意力渙散:隨著任務輪數增加或專案規模擴大，Trajectory 與檢索出的程式碼迅速膨脹，不僅消耗龐大的 Token 成本，也容易使模型在長序列中遺失最初的架構設計意圖，導致邏輯漂移。  
+程式碼修改與 Patch 套用的脆弱性:無論是基於 str_replace（搜尋與替換）還是 Unified Diff，模型經常因為微小的縮排、行號偏移或程式碼重複匹配失敗，導致修改指令無法套用。這使得 Agent 常常需要浪費寶貴的計算輪數在修正「語法級別的 Patch 錯誤」而非解決業務邏輯 Bug。  
+缺乏全域架構約束的「盲目重構」風險:在缺乏嚴格的測試防護網或 CI 閘道時，自主代理容易進行過度修改（Over-editing），在高度耦合的 legacy 程式碼中引發潛在的迴歸錯誤（Regression），暴露出當前模型對大型軟體全域相依性的底層理解仍有侷限。  
 
 
 
