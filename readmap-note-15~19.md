@@ -292,4 +292,163 @@ AI 程式編寫工具正經歷從「被動的程式碼補全（Inline Autocomple
 缺乏全域架構約束的「盲目重構」風險:在缺乏嚴格的測試防護網或 CI 閘道時，自主代理容易進行過度修改（Over-editing），在高度耦合的 legacy 程式碼中引發潛在的迴歸錯誤（Regression），暴露出當前模型對大型軟體全域相依性的底層理解仍有侷限。  
 
 
+## part19 Evaluation
+## 名詞理解
+1.Capability benchmarks  
+通識與專業知識  
+MMLU / MMLU-Pro：覆蓋人文、社科、STEM 的經典通識基準（MMLU-Pro 透過增加選項與更難的問題來延緩飽和）。  
+GPQA Diamond：專家級（具備博士學位水準）的物理、化學、生物學研究級科學問答，專門用來考驗模型的深層專業知識。  
+數學與程式邏輯  
+MATH / AIME：從高中競賽到美國數學邀請賽（AIME）級別的高階數學推理基準。  
+HumanEval / LiveCodeBench / SWE-bench Verified：涵蓋從簡單函數級到真實 GitHub 專案修復的程式碼能力評估。  
+綜合推理與遵循能力  
+BBH / MUSR / DROP：針對多步複雜邏輯推理、字串處理與閱讀理解的基準。  
+IFEval：嚴格檢驗模型是否能完美遵循複雜格式與指令限制的評估工具。  
+HellaSwag / WinoGrande：傳統的常識與指代消解基準（目前已完全飽和）。  
+突破飽和的下一代極限基準:  
+Humanity's Last Exam (HLE):由 Center for AI Safety 與 Scale AI 聯合推出的多模態專家級基準（包含 2,500+ 道題目）。  
+FrontierMath:由全球數十位頂尖數學家原創的數百道高難度現代數學題（涉及數論、代數幾何、範畴論等）。  
+ARC-AGI 2:François Chollet 推出的全新升級版 ARC 抽象推理基準。  
+2.Arena / preference  
+優勢  
+真實反映人類偏好：擺脫了傳統學術基準的死板與侷限，能夠全面捕捉真實世界中複雜、開放式、多樣化的使用者意圖。  
+缺點  
+冗長與排版迷思：統計發現，人類評審往往會無意識地偏好回答冗長（Verbose）、善用精美 Markdown 排版、語氣熱情討好（Sycophancy）的模型，即使其內容包含了事實錯誤或幻覺。  
+「Style > Substance」：這導致許多模型為了刷高 Arena 排名，被刻意調校成「話多、愛用列點、態度逢迎」的風格，而非追求邏輯的精簡與絕對正確。  
+進階變體與垂直領域競技場
+Arena-Hard:利用自動化 LLM-as-a-Judge（以最強模型充當裁判）針對高難度、具備挑戰性的提示詞集進行過濾與評測，大幅降低對人工盲測的依賴並提升鑑別度。  
+WildBench:專門收集真實世界中極其刁鑽、複雜、長時序的真實使用者提問（Wild Prompts），用來評估模型在真實高壓情境下的極限表現。  
+CopilotArena (或 Coding Arena):專門針對程式碼生成與編輯任務所設立的盲測競技場，讓開發者在盲測中比較不同 Coding Assistant 的實際除錯與寫碼能力。  
+3.LLM-as-judge  
+引入強大的前沿模型（如 GPT-4、Claude 3.5 Sonnet、Gemini）來擔任自動化裁判（Judge），根據預設的評分標準（Rubrics）對受測模型的回答進行客觀評分或兩兩對決（Pairwise Comparison）。  
+四大核心偏誤與科學修正對策:  
+Position Bias (位置偏誤)  
+問題：裁判模型在進行 A/B 對決時，往往會無意識地偏好排在前面（Model A）的回答。  
+修正對策：隨機交換順序（Swap positions）。對每個測試樣本執行兩次評測（A vs. B 與 B vs. A），綜合雙方表現以消除順序帶來的影響。  
+Length Bias (長度偏誤)  
+問題：裁判模型極易被「長篇大論、洋洋灑灑」的回答所迷惑，誤以為字數多就是內容豐富。  
+修正對策：長度控制評分（Length-controlled scoring，如 AlpacaEval 2.0）。在統計模型中引入長度懲罰或迴歸校正，將回答字數做為變數進行數學剝離，還原真實的質量分數。  
+Self-Preference (自我偏誤)  
+問題：當使用某個特定家族的模型（例如 GPT 系列）擔任裁判時，它往往會給予同系列模型產生的回答更高分數。  
+修正對策：替換 Judge Model 或使用多模型交叉對照。避免單一模型獨裁，改用獨立、開源或多個強模型聯合仲裁（Ensemble Judging）。  
+Lack of Chain-of-Thought Reasoning (缺乏透明推理)  
+問題：直接要求模型輸出一個分數（如 1–10 分）容易流於黑箱與主觀隨機性。  
+修正對策：先推理後評分（First reason, then score）。強制規定 Judge 在給出最終分數前，必須先逐步寫出詳細的優缺點分析與推理過程（CoT），大幅提升評分的穩定度與可解釋性。  
+4.Contamination污染  
+污染檢測技術  
+N-gram 匹配 (N-gram Overlap):計算預訓練語料庫與評估基準題目之間的文字重疊度（N-gram 相似度），過濾高度相似的文本。  
+損失函數尖峰分析 (Loss Spike Detection):觀察模型在特定題目上的預測 Loss（困惑度），若模型對某道題目的初始預測 Loss 異常低，通常代表該題目已存在於其訓練集中。  
+改寫對比測試 (Paraphrase & Perturbation):將標準考題的語法、變數名稱或敘述方式進行同義改寫（Paraphrase），若模型在原題拿高分但在改寫題分數暴跌，即可證實模型依賴死記硬背而非真實理解。    
+三大防禦對策  
+動態更新與定期換題 (Live Benchmarks):推出每月或定期自動更新題目的基準（如 LiveBench、LiveCodeBench），確保題目在模型預訓練截止日之後才誕生，徹底阻斷偷看管道。  
+私有盲測與保留集 (Private Holdout Sets):維護不公開的私有測試集（如企業內部或大賽專用的 Holdout Set），僅允許遠端評測，防止題目外洩至公開網路上。  
+評估推理過程而非僅看最終答案 (Reasoning Trace Evaluation):不再依賴傳統的選擇題或簡單數值匹配，而是要求模型產出完整的思考路徑（Reasoning Trace / CoT）。即使題目被背下來，若缺乏動態推演過程也無法順利過關。  
+5.eval  
+五大核心評估維度 (Evaluation Dimensions):  
+正確性 (Accuracy)：解決方案或回答事實是否正確。  
+簡潔度 (Conciseness)：是否廢話過多、直達核心。  
+語氣 (Tone)：是否符合品牌調性（專業、有同理心、不暴躁）。  
+拒絕能力 (Refusal)：面對超出範圍或違規請求時，能否安全且精準地拒絕。  
+工具調用 (Tool Use)：是否能正確觸發後端 API 或資料庫查詢。  
+雙軌評測機制 (Human + LLM Evaluation):結合「人類專家抽樣盲測」與「自動化 LLM-as-a-Judge（針對 100 題進行批次自動評分）」，兼顧精準度與自動化效率。  
+現代 LLM Ops 評估工具鏈 (Tooling Ecosystem):  
+Braintrust：專為 AI 產品設計的資料集、評估與實驗追蹤協作平台。  
+Langfuse：開源的 LLM 工程平台，支援追蹤 (Tracing)、評估 (Evaluation) 與提示詞管理。  
+Weights & Biases (W&B) Weave：強大的實驗追蹤與模型評估視覺化工具。  
+輕量派：自寫 Python 腳本 + Google Sheets：新創團隊早期常用的低成本靈活方案。  
+6.名詞表  
+Pass@k (程式碼通過率):讓模型對同一個題目生成 $k$ 個候選答案，只要其中有至少一個通過單元測試即算成功的比例。  
+ELO / Bradley-Terry (競技場排名模型):從兩兩對決（Pairwise Comparison）的投票結果中推導出潛在實力評分（Latent Rating）。如 LMSYS Chatbot Arena 即採用 Bradley-Terry 的最大似然估計（MLE）來計算全球模型排名。  
+Contamination (資料污染):評估基準在模型預訓練階段被「偷看過」的現象。可透過 N-gram 匹配或 Canary String 偵測，而推出「動態即時基準（Live Benchmarks）」是當前最強的防禦解法。  
+Refusal rate (拒絕率與過度拒絕):衡量模型面對安全審查或越獄時的行為。值得注意的是，Over-refusal（過度拒絕合法的正常請求）往往是常被忽略但嚴重影響產品體驗的品質問題。  
+Length bias (長度偏誤):裁判模型或人類評審會默默偏好「字數多、排版華麗」的回答。需透過長度控制評分（Length-controlled scoring）等數學手段進行校正。  
+Eval-driven dev (評估驅動開發，類似 TDD):將 Eval Set 當成軟體工程中的單元測試來對待，規定每次調整 Prompt 或更換模型前必須先跑過測試集，分數達標才能進行部署。  
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)  
+AI 評估基準正面臨空前的「飽和與污染危機」。傳統靜態基準（如 MMLU、HumanEval）在模型快速進化下紛紛突破 90%，高分背後往往反映的是背誦記憶而非真實推理；同時，社群透過 LMSYS Chatbot Arena 的盲測機制與 LLM-as-a-judge 自動化裁判，建立起以使用者偏好為核心的動態評估生態。  
+「好的 Eval 是 AI 產品開發的單元測試（Unit Test）」。學術基準適合衡量前沿模型的極限，但在真實商業場景中，團隊必須建立針對特定業務（如客服、Agent 任務）的黃金測試集（Golden Dataset），並落實如 TDD 般的 Eval-driven dev 流程，每次改動前必先跑 Eval。  
+(b)  
+資料污染與分數通脹:開放式基準在網路爬蟲普及下頻繁流進預訓練集，導致模型在榜單上的高分失真，無法真實反映面對未知新題時的泛化與推理能力。  
+裁判偏誤與風格盲點:無論是人類盲測（Arena）還是 LLM-as-judge，皆存在嚴重的長度偏誤、自我偏愛與過度包裝迷思，使模型容易被引導去追求「話術與排版」而非「邏輯與事實正確」。  
+學術基準與真實業務的巨大鴻溝:傳統靜態考卷（如選擇題）無法有效衡量真實世界中複雜、動態、多輪互動的軟體代理（Agent）與客服系統表現，導致「榜單第一名不等於產品好用」。  
+
+
+
+
+## part20 Data
+## 名詞理解
+1.Pretraining pipeline  
+原始網頁擷取與解析 (Extraction):  
+Common Crawl WARC:網路世界規模最大的開放式爬蟲資料庫（包含數十億個網頁的原始 WARC 檔案）。  
+文字萃取工具 (trafilatura / resiliparse):專門用於剝離 HTML 標籤、廣告、導覽列與側邊欄雜訊，精準提取出核心文章與段落純文字的超高效解析器。  
+語言識別與基本過濾 (Language ID & Heuristics):  
+FastText Language ID:快速辨識並過濾出目標語言（例如繁體中文與英文），剔除外語或混合亂碼網頁。  
+啟發式過濾 (Heuristic Filtering):設定硬性指標（如每行平均長度、特殊符號/表情符號比例、大寫字母佔比等），過濾掉機器生成的垃圾文章或 SEO 灌水網站。  
+品質與安全分類 (Quality & Safety Classifiers):  
+高品質分類器 (Quality Classifier):利用訓練好的 FastText 模型或小型 LLM，評分並篩選出達到百科全書、學術級別的高質量文本。  
+毒性與 NSFW 過濾 (Toxicity / NSFW Filter):嚴格剔除含有暴力、色情（NSFW）、仇恨言論或惡意攻擊的有害語料，確保模型的合規性。  
+大規模去重 (Deduplication):  
+MinHash 去重 (MinHash LSH):採用 5-gram 與 Jaccard 相似度（閥值設定約 0.8），在分散式叢集中高效找出網路上成千上萬的重複站點、轉載文與鏡像站，大幅降低訓練冗餘並防止過擬合。  
+多源資料黃金配比 (Data Mixing):  
+綜合語料融合:將清洗完畢的網頁文本，與高價值的程式碼（Code）、專業書籍（Books）、學術論文（Academic）以及合成資料（Synthetic Data）按照特定比例進行融合混編（Data Blending），送入模型的預訓練階段。  
+2.Dedup  
+在所有預訓練資料清洗步驟中，去重（Deduplication）往往是用最少的運算成本，換取模型效能提升最顯著的關鍵環節。  
+核心技術：MinHash + LSH  
+MinHash:將每篇文章轉換為一組精簡的 Hash 特徵，能夠在保持極低空間佔用的同時，精準估算兩篇文檔之間的 Jaccard 相似度。  
+LSH:將相似的 MinHash 雜湊值歸納到同一個「分桶（Buckets）」中。透過分桶機制的過濾，將大規模比對的計算複雜度降至近乎線性，高效找出網路上成千上萬的近似重複頁面（Approximate Near-Duplicates）。  
+Lee et al. (2022) 經典研究:  
+該研究指出，經過嚴格去重後的資料集在進行相同算力（Compute Budget）的預訓練時，模型的 Perplexity（困惑度）顯著下降。  
+這證明了去除重複資料不僅能節省儲存與訓練時間，還能強迫模型去學習更多元、分佈更廣的真實語言規律，大幅降低過擬合（Overfitting）風險。  
+3.Quality filter  
+FineWeb-Edu (Hugging Face):專門訓練分類器以「教育價值（Educational Value）」為評分標準，大量拔高教科書、線上課程與學術討論文本的權重，過濾掉娛樂八卦與低俗內容。  
+DCLM:採用精選的正例（如 OH-2.5 與 ELI5 - Explain Like I'm 5），偏好結構清晰、邏輯嚴密且具備良好科普解釋能力的語料。  
+Phi 系列 (Microsoft):微軟的 Phi 路線主打「Textbook Quality（課本級品質）」。透過強大的 Teacher LLM 將複雜的網頁內容重新改寫與蒸餾成如教科書般精煉、結構化的合成/清洗資料。  
+沒有絕對客觀的資料清洗:所謂的「品質過濾」本質上就是一種人為的價值觀裁決。當我們決定用 Wikipedia、教科書或 ELI5 作為正例訓練分類器時，我們就在資料源頭灌輸了特定的語言風格、學術權威感與文化視角。  
+4.Synthetic data  
+Phi-3 / Phi-4:利用強大的教師模型（Teacher LLM）根據大綱或主題，主動編撰出如同教科書般邏輯嚴密、結構清晰的高密度教學文本與程式碼範例。  
+Tülu 3:透過引入「具備特定背景、情境與角色 Persona」的提示詞模板，再由 GPT-4 或 Claude 生成多樣化的對話與推理回答，大幅提升 SFT 階段指令的多樣性。  
+OpenMath / MetaMath:針對高難度數學與邏輯題目進行逆向擴增、變數代換與多步思維鏈（CoT）重構，擴大模型在數理推理上的訓練樣本池。  
+Magpie:巧妙利用對齊前（Pre-aligned）的 Base Model，直接誘發其在訓練時期的指令遵循行為，無須透過人工編寫 Prompt 就能自然產出海量的開端對話資料，大幅降低 SFT 資料收集成本。  
+5.SFT / preference data  
+監督微調資料集:  
+Alpaca：早期的經典指令微調集，透過 Self-Instruct 機制由 GPT-3.5 自動生成，奠定開源指令微調基礎。  
+ShareGPT：抓取真實人類與 ChatGPT 的多輪對話紀錄，具備極高的對話自然度與真實排版風格。  
+UltraChat：涵蓋多元主題、大規模且多輪（Multi-turn）的高品質對話合成資料集。  
+Tülu (AI2)：整合多種開源指令與對話數據的高標準開源 SFT 訓練集。  
+OpenHermes：以高度多樣性與嚴格過濾著稱的頂級開源 SFT 訓練集，大幅提升開源模型的指令遵循與工具調用能力。  
+偏好與對齊資料集:  
+UltraFeedback：包含大規模、多維度（如正確性、真實性、誠實度）由強力模型自動打分與對比的頂級偏好資料集。  
+HH-RLHF (Anthropic Helpful & Harmless)：專注於「有幫助 (Helpful)」與「無害 (Harmless)」平衡的安全對齊偏好資料。  
+SHP (Stanford Human Preferences)：來自 Reddit 等真實網路社群人類投票結果的偏好對齊資料。  
+Skywork-Reward：專為獎勵模型（Reward Model）訓練設計的高質量、細粒度偏好評分資料集。  
+推理思維鏈資料集:  
+OpenR1：開源社群為了重現 DeepSeek-R1 推理能力而推動的開放式思維鏈資料與訓練管線。  
+AceReason / Bespoke-Stratos：包含逐步推理、自我驗證、錯誤修正等完整思考過程（Reasoning Traces）的高端合成邏輯資料集。  
+6.爬蟲  
+基本禮儀與識別:  
+尊重 robots.txt：遵循網站管理員設定的爬蟲白名單與禁令。  
+清晰的 User-Agent：主動宣告爬蟲身份與所屬機構，避免惡意偽裝。  
+日益加劇的反 AI 爬蟲機制 (Anti-AI Scraping):隨著 Cloudflare 等主流 CDN 廠商全面升級防禦系統，針對 AI 訓練爬蟲的行為特徵分析、速率限制與瀏覽器指紋識別越來越普及，導致大規模自動化擷取的技術門檻與成本急速飆升。  
+法律大環境的動盪與授權壁壘:  
+標誌性版權訴訟:以 NYT v. OpenAI 與針對 Anthropic 的系列版權訴訟為首，正從法律層面挑戰「網頁公開資料是否屬於合理使用（Fair Use）」的核心定義。  
+社群與內容平台的封閉化:如 Reddit 等大型論壇紛紛關閉免費 API 並轉向與科技巨頭簽署獨家商業授權協議，象徵著「整個互聯網都是免費開源訓練語料」的蠻荒擴張時代已經結束。  
+2026 仍未塵埃落定的合規紅線:智慧財產權、著作權費與爬蟲合法性的全球法律框架仍處於高度動態變動的灰色地帶，成為當前各大 AI 企業在模型預訓練階段必須嚴陣以待的重大法務與合規風險。  
+7.名詞表  
+Common Crawl (大規模網絡爬蟲資料庫):每個月抓取數十億個網頁、規模達數 PB 的 Raw HTML 資料庫，是當今所有 Frontier Models 預訓練語料的根基。  
+WARC:Common Crawl 的標準化封存格式，將每個網頁的原始標頭、中繼資料與 HTML 內容封裝為單一記錄。  
+MinHash:對文件的 5-gram 特徵計算多個 Hash 的最小值，作為評估 Jaccard 相似度的極高效近似估計方法。  
+LSH:將相似的 MinHash 歸納到同一個分桶中，將海量文件去重的計算複雜度從 O(N^2) 大幅降至近乎線性 O(N)。  
+Data mixture:程式碼、網頁、書籍、學術論文等不同 Source 的黃金混編比例，直接決定了模型最終的綜合能力分佈（通常透過 Ablation 實驗調校）。
+Synthetic:透過強模型寫程式給弱模型學（蒸餾），或利用 Base Model 自問自答（如 Magpie）來突破人類網路資料天花板的技術。  
+Canary:刻意埋在訓練資料中的特殊標記字串，後續可用於檢測模型是否對特定敏感或版權資料進行了「過度死記硬背（Memorization）」。  
+
+## 學習記錄：(a) 你看到了什麼，查到了什麼，瞭解到了什麼，你又關心什麼具體現象 (b) 為什麼現有方法的問題是什麼？  
+(a)  
+隨著互聯網公開高質量文本面臨枯竭（Data Wall），AI 產業的競爭焦點已從「盲目擴大爬蟲規模」徹底轉向「精細化策展（Curation）、自動化去重與高質量合成資料」。資料工程不再只是附屬步驟，而是決定模型天花板的核心護城河。  
+「Data is the new oil, but curation is the refinery (資料是原油，但策展是煉油廠)」。模型的能力分佈與安全性高度取決於 Data Mixture（資料混編比例）與過濾器的設計；同時，過濾器的選擇本質上就是一場對模型世界觀與語氣風格的價值觀裁決。  
+(b)  
+互聯網枯竭與版權法務壁壘:隨著各大 CDN（如 Cloudflare）全面升級反爬蟲機制，加上 NYT 等版權訴訟與 Reddit 授權變動，過去那種「整個互聯網都是免費開源訓練語料」的蠻荒擴張時代已不復存在。  
+合成資料的同質化與模式崩塌:依賴少數頂級閉源模型的輸出進行大規模蒸餾，會讓開源模型充斥著標準的「AI 腔調」，導致多樣性遞減並喪失真實人類語言的豐富細節。  
+過濾器帶來的隱性偏見:自動化品質過濾器（如偏好維基百科或教科書風格）在拔高學術與邏輯密度的同時，也可能無意間抹殺了非正統表達、多元文化視角或日常俚語，使模型過於菁英化與單一化。  
 
